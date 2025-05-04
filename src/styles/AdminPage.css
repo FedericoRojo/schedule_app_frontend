@@ -1,0 +1,410 @@
+.admin-container {
+    display: flex;
+    min-height: 100vh;
+  }
+  
+  .admin-sidebar {
+    width: 250px;
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px;
+  }
+  
+  .admin-sidebar h2 {
+    margin-bottom: 30px;
+    font-size: 1.5rem;
+  }
+  
+  .menu-item {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 8px;
+    text-align: left;
+    background-color: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+  
+  .menu-item:hover {
+    background-color: #34495e;
+  }
+  
+  .menu-item.active {
+    background-color: #3498db;
+  }
+  
+  .menu-item-icon {
+    margin-right: 10px;
+  }
+  
+  .admin-main {
+    flex: 1;
+    padding: 30px;
+    background-color: #f5f6fa;
+  }
+  
+  .content-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  .admin-topbar {
+    height: 60px;
+    background-color: white;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    padding: 0 30px;
+    margin-bottom: 20px;
+  }
+  
+  .admin-topbar h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #2c3e50;
+  }
+
+
+  /* Services section */
+  .services-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .services-table th,
+  .services-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .services-table th {
+    background-color: #f8f9fa;
+  }
+  
+  .service-row.editing td {
+    background-color: #fff9e6;
+  }
+  
+  .edit-input {
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 150px;
+  }
+  
+  .actions-cell {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .action-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .edit-button {
+    background-color: #3498db;
+    color: white;
+  }
+  
+  .delete-button {
+    background-color: #e74c3c;
+    color: white;
+  }
+  
+  .confirm-button {
+    background-color: #2ecc71;
+    color: white;
+  }
+  
+  .cancel-button {
+    background-color: #95a5a6;
+    color: white;
+  }
+  
+  .confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  .modal-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+
+  /* Employee section */
+  /* Estilos generales para empleados */
+.employee-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .employee-table th,
+  .employee-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .employee-table th {
+    background-color: #f8f9fa;
+  }
+  
+  .services-tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 300px;
+  }
+  
+  .service-tag {
+    background-color: #3498db;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .service-tag-remove {
+    cursor: pointer;
+    padding-left: 4px;
+  }
+  
+  /* Modal de agregar empleado */
+  .add-employee-modal {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    width: 400px;
+  }
+  
+  .modal-input-group {
+    margin-bottom: 15px;
+  }
+  
+  .modal-input-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3e50;
+  }
+  
+  .service-checkbox-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+  }
+  
+  .service-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+
+  /* Employees section*/
+  /* Search Modal Container */
+.confirmation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.add-employee-modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Search Inputs */
+.modal-input-group {
+  margin-bottom: 1.5rem;
+}
+
+.modal-input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+/* Search Results */
+.search-results {
+  margin-top: 1.5rem;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+}
+
+.results-list {
+  margin-top: 1rem;
+}
+
+.user-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.user-result-item:hover {
+  background-color: #e9ecef;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-info span {
+  display: block;
+}
+
+.user-email {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* Role Management */
+.role-management {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.role-select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.save-role-button {
+  padding: 0.5rem 1rem;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-role-button:hover {
+  background-color: #357abd;
+}
+
+/* No Results Message */
+.no-results {
+  text-align: center;
+  color: #666;
+  padding: 1rem 0;
+}
+
+/* Buttons */
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.action-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.confirm-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.cancel-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .user-result-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .role-management {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .add-employee-modal {
+    padding: 1.5rem;
+  }
+}

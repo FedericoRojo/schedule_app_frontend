@@ -1,0 +1,28 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: #ffffff; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+  }
+  
+  .header-logo {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    cursor: pointer;
+  }
+  
+  .header-logo img {
+    height: 40px; /* Adjust logo size */
+  }
+  
+  .header-profile {
+    cursor: pointer;
+  }
+  
+  .header-profile img {
+    height: 32px; 
+    border-radius: 50%; 
+  }

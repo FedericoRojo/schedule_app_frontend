@@ -1,0 +1,81 @@
+.schedule-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 200px;
+  background: #f8f9fa;
+  padding: 20px;
+  border-right: 1px solid #dee2e6;
+}
+
+.sidebar-button {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 6px;
+  background: #e9ecef;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.sidebar-button.active {
+  background: #4dabf7;
+  color: white;
+}
+
+.sidebar-button:hover {
+  background: #dee2e6;
+}
+
+.main-content {
+  flex: 1;
+  padding: 30px;
+}
+
+.appointments-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.appointments-table th,
+.appointments-table td {
+  padding: 12px;
+  border: 1px solid #dee2e6;
+  text-align: left;
+}
+
+.appointments-table th {
+  background-color: #f8f9fa;
+}
+
+.cancel-button {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-button {
+  background: #40c057;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+.time-selection {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
