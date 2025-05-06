@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/BookingPage.css';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
@@ -32,7 +32,6 @@ const BookingPage = () => {
         );
         const servicesData = await servicesResponse.json();
         
-        // Fetch appointments
         const specialistsResponse = await fetch(
           `${import.meta.env.VITE_APP_API_BASE_URL}/users/employees`,
           {
@@ -71,7 +70,12 @@ const BookingPage = () => {
 
   const handleAppointmentConfirmation = async () => {
     const token = localStorage.getItem('token');
-    const specialistID = selectedSpecialist.id; 
+    const specialistID = selectedSpecialist.id;   
+
+    const timeUTC = moment(selectedTime).utc();
+    const dateUTC      = timeUTC.format('YYYY-MM-DD');
+    const startTimeUTC = timeUTC.format('HH:mm');
+    const endTimeUTC = timeUTC.clone().add(selectedService.duration, 'minutes').format('HH:mm');
 
     const appointmentConfirmationResponse = await fetch(`
       ${import.meta.env.VITE_APP_API_BASE_URL}/appointment/new`,
@@ -84,14 +88,14 @@ const BookingPage = () => {
       , body: JSON.stringify({
           employee_id: specialistID, 
           service_id: selectedService.id, 
-          date: moment(selectedTime).format('YYYY-MM-DD'), 
-          start_time: moment(selectedTime).format('hh:mm')
+          date: timeUTC.format('YYYY-MM-DD'), 
+          start_time: startTimeUTC,
+          end_time: endTimeUTC
         })
       });
 
     
     const appointmentConfirmationData = await appointmentConfirmationResponse.json();
-    console.log(appointmentConfirmationData);
     navigate('/');
   }
 
@@ -214,238 +218,199 @@ const SpecialistStep = ({ specialists, selectedSpecialist, onSelect, onBack }) =
   </div>
 );
 
+const TimeStep = ({
+  employeeId,
+  serviceDuration,
+  onBack,
+  selectedDate,
+  setSelectedDate,
+  selectedTime,
+  setSelectedTime,
+  setCurrentStep
+}) => {
+  const [selectedSlot, setSelectedSlot] = useState(null)
+  const [availability, setAvailability] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [localDate, setLocalDate] = useState(selectedDate || new Date());
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
-const TimeStep = ({ 
-    employeeId,
-    serviceDuration,
-    onBack,
-    selectedDate,
-    setSelectedDate,
-    selectedTime,
-    setSelectedTime,
-    setCurrentStep
-  }) => {
-    const [availability, setAvailability] = useState([]);
-    const [appointments, setAppointments] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [localDate, setLocalDate] = useState(selectedDate || new Date());
+  // UTC ↔ Local helpers
+  const toUTCString = dateLocal => moment(dateLocal).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
 
-    useEffect(() => {
-      const fetchData = async () => {
-        if (!employeeId || !serviceDuration) return;
-        
-          (true);
-        try {
-          const { start, end } = getWeekRange(localDate);
-          const token = localStorage.getItem('token');
-          const availResponse = await fetch(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/availability/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`,
-            {headers: {
-              'Authorization': token,
-              'Content-Type': "application-json"
-            }}
-          );
-          const availabilityData = await availResponse.json();
-          
-          
-          // Fetch appointments
-          const appsResponse = await fetch(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/appointment/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`,
-            {
-              headers: {
-                'Authorization': token,
-                "Content-Type": "application-json"
-              }
-            }
-          );
-          const appointmentsData = await appsResponse.json();
+  useEffect(() => {
+    setSelectedDate(localDate);
+  }, [localDate, setSelectedDate]);
 
-          setAvailability(availabilityData.result);
-          setAppointments(appointmentsData.result);
-        } catch (error) {
-          console.error('Fetch error:', error);
-
-        } finally {
-          setIsLoading(false);
-        }
-      };
-  
-      fetchData();
-    }, [localDate, employeeId, serviceDuration]);  
-
-    useEffect(() => {
-      setSelectedDate(localDate);
-    }, [localDate]);
-  
-    const handleNavigate = (newDate) => {
-      
-      setLocalDate(newDate);
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!employeeId || !serviceDuration) return;
+      setIsLoading(true);
+      try {
+        const { start, end } = getWeekRange(localDate);
+        const token = localStorage.getItem('token');
+        const [availRes, appsRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/availability/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`, { headers: { Authorization: token, 'Content-Type': 'application/json' }}),
+          fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/appointment/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`, { headers: { Authorization: token, 'Content-Type': 'application/json' }})
+        ]);
+        const availData = await availRes.json();
+        const appsData = await appsRes.json();
+        setAvailability(availData.result || []);
+        setAppointments(appsData.result || []);
+      } catch (error) {
+        console.error('Fetch error:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
+    fetchData();
+  }, [localDate, employeeId, serviceDuration]);
 
-function generateNewAvailability(availability, appointments) {
-  const sqlFormat = 'YYYY-MM-DD HH:mm:ss';
-  let newAvailability = [...availability];
-  
-  for (const appointment of appointments) {
-    const tempAvailability = [];
-    const appointmentDate = moment(appointment.date).format('YYYY-MM-DD');
-    const appointmentStart = moment(`${appointmentDate} ${appointment.startTime}`);
-    const appointmentEnd = moment(`${appointmentDate} ${appointment.endTime}`);
+  // Generate free slots in UTC
+  const generateNewAvailabilityUTC = (availability, appointments) => {
+    let newSlots = availability.map(slot => ({ ...slot }));
 
-    for (const slot of newAvailability) {
-      const slotDate = moment(slot.date).format('YYYY-MM-DD');
-      const slotStart = moment(`${slotDate} ${slot.start_time}`);
-      const slotEnd = moment(`${slotDate} ${slot.end_time}`);
-      
-
-      // Check if slots are on different days or don't overlap
-      if (!appointmentStart.isSame(slotStart, 'day') ||
-          appointmentEnd.isSameOrBefore(slotStart) ||
-          appointmentStart.isSameOrAfter(slotEnd)
-      ) {
-        tempAvailability.push(slot);
-        continue;
-      }
-
-      // Calculate overlap boundaries
-      const overlapStart = moment.max(appointmentStart, slotStart);
-      const overlapEnd = moment.min(appointmentEnd, slotEnd);
-
-      // Add non-overlapping portions
-      if (slotStart.isBefore(overlapStart)) {
+    console.log(appointments);
+    if(appointments.length > 0){
+      appointments.forEach(appt => {
+        const temp = [];
+        const dateOnly = moment.utc(appt.date).format('YYYY-MM-DD');
+        const startA = moment.utc(`${dateOnly}T${appt.startTime}`);
+        const endA = moment.utc(`${dateOnly}T${appt.endTime}`);
         
-        tempAvailability.push({
-          start_time: slotStart.format('HH:mm:ss'),
-          end_time: overlapStart.format('HH:mm:ss'),
-          date: slot.date
+        newSlots.forEach(slot => {
+          const slotDateOnly = moment.utc(slot.date).format('YYYY-MM-DD');
+          const startS = moment.utc(`${slotDateOnly}T${slot.start_time}`);
+          const endS = moment.utc(`${slotDateOnly}T${slot.end_time}`);
+          console.log(startS);
+
+          if (!startA.isSame(startS, 'day') || endA.isSameOrBefore(startS) || startA.isSameOrAfter(endS)) {
+            temp.push(slot);
+          } else {
+            const overlapStart = moment.max(startA, startS);
+            const overlapEnd = moment.min(endA, endS);
+            if (startS.isBefore(overlapStart)) temp.push({ date: slot.date, start_time: startS.format('HH:mm:ss'), end_time: overlapStart.format('HH:mm:ss') });
+            if (overlapEnd.isBefore(endS)) temp.push({ date: slot.date, start_time: overlapEnd.format('HH:mm:ss'), end_time: endS.format('HH:mm:ss') });
+          }
+
         });
-      }
-      
-      if (overlapEnd.isBefore(slotEnd)) {
-        tempAvailability.push({
-          start_time: overlapEnd.format('HH:mm:ss'),
-          end_time: slotEnd.format('HH:mm:ss'),
-          date: slot.date
-        });
-      }
+        newSlots = temp;
+      });
+
     }
-    
-    newAvailability = tempAvailability;
-    
-  }
-  return newAvailability;
-}
 
-const generateTimeSlots = () => {
-  if (!availability?.length || !appointments || !serviceDuration) return [];
-  
-
-  const availableSlots = generateNewAvailability(availability, appointments);
-  const timeSlots = [];
-  
-
-  availableSlots.forEach(slot => {
-    const slotDate = moment(slot.date).format('YYYY-MM-DD');
-    let current = moment(`${slotDate} ${slot.start_time}`);
-    const end = moment(`${slotDate} ${slot.end_time}`);
-    
-    
-    while (current < end) {
-      const slotEnd = moment(current).add(serviceDuration, 'minutes');
-      
-      if (slotEnd.isSameOrBefore(end)) {
-
-
-        timeSlots.push({
-          start: current.toDate(),
-          end: slotEnd.toDate(),
-          status: 'available',
-          title: 'Available'
-        });
-        current = slotEnd;
-
-      } else {
-        break;
-      }
-    }
-  });
-  
-  return timeSlots;
-};
-          // Generar eventos para el calendario
-    const calendarEvents = () => {
-        const result =  generateTimeSlots().map(slot => ({
-          title: slot.title,
-          start: slot.start,
-          end: slot.end,
-          status: slot.status
-        })); 
-        
-        return result;
-    };
-
-    // Estilos para los eventos
-    const eventStyleGetter = (event) => {
-      const style = {
-        backgroundColor: event.status === 'available' ? '#90EE90' : '#FF7F7F',
-        borderRadius: '4px',
-        color: 'black',
-        border: 'none'
-      };
-      return { style };
-    };
-
-      // Manejar selección de slot
-      const handleSlotSelect = (slot) => {
-        if (slot.status === 'available') {
-          setSelectedTime(slot.start);
-        }
-      };  
-
-      const onSubmit = () => {
-        setCurrentStep(4);
-      }
-  
-      return (
-        <div className="time-step-container">
-          <button className="back-button" onClick={onBack}>
-            ← Back to Specialist
-          </button>
-    
-          <div className="calendar-container">
-          { isLoading 
-              ? 
-              (<div className="loading-message">Loading availability...</div>) 
-              : 
-              (<Calendar
-                localizer={localizer}
-                events={calendarEvents()}
-                defaultView="week"
-                views={['week']}
-                date={localDate}
-                onNavigate={handleNavigate}
-                style={{ height: 500 }}
-                min={new Date(0, 0, 0, 9, 0, 0)}
-                max={new Date(0, 0, 0, 18, 0, 0)}
-                eventPropGetter={eventStyleGetter}
-                selectable={true}
-                onSelectEvent={handleSlotSelect}
-              />)}
-            
-          </div>
-    
-          {selectedTime && (
-            <button 
-              className="confirm-button next-button" 
-              onClick={onSubmit}
-              disabled={!selectedTime}
-            >
-              Confirm
-            </button>
-          )}
-        </div>
-      );
+    return newSlots;
   };
+
+  // Generate time slots of serviceDuration in UTC
+  const generateTimeSlotsUTC = () => {
+    
+    if (availability.length == 0 && !serviceDuration) return [];
+
+    const freeSlots = generateNewAvailabilityUTC(availability, appointments);
+    
+    const slots = [];
+
+    freeSlots.forEach(slot => {
+      const datePart = moment.utc(slot.date).format('YYYY-MM-DD'); 
+      let current = moment.utc(`${datePart}T${slot.start_time}`); 
+      const end     = moment.utc(`${datePart}T${slot.end_time}`);
+
+      while (current.isBefore(end)) {
+        const endSlot = moment.utc(current).add(serviceDuration, 'minutes');
+        if (endSlot.isSameOrBefore(end)) {
+          slots.push({
+            id: current.valueOf(),
+            start: current.toDate(),
+            end: endSlot.toDate(),
+            status: 'available',
+            title: 'Available'
+          });
+          current = endSlot;
+        } else break;
+      }
+
+    });
+
+    return slots;
+  };
+
+  // Calendar events with local times
+  const calendarEvents = () => {
+    let result = generateTimeSlotsUTC().map(slot => ({
+      id: slot.id,
+      title: slot.title,
+      start: moment.utc(slot.start).local().toDate(),
+      end: moment.utc(slot.end).local().toDate(),
+      status: slot.status,
+      resource: slot
+    })) 
+
+    return result;
+
+  };
+
+  // Style events, highlight selected
+  const eventStyleGetter = event => {
+    const isSelected = event?.id === selectedEvent?.id;
+    return {
+      style: {
+        backgroundColor: isSelected ? '#3399FF' : '#90EE90',
+        border: isSelected ? '2px solid #0066CC' : 'none',
+        borderRadius: '4px',
+        color: 'black'
+      }
+    };
+  };
+
+  // Select event
+  const handleSelectEvent = event => {
+    if (event) {
+      setSelectedEvent(event);
+    }
+  };
+
+  const handleNavigate = (newDate) => {
+      setLocalDate(newDate);
+  };
+
+  const onSubmit = () => {
+    setSelectedTime(selectedEvent.start); 
+    setCurrentStep(4)
+  };
+
+  return (
+    <div className="time-step-container">
+      <button className="back-button" onClick={onBack}>← Back to Specialist</button>
+      <div className="calendar-container">
+        {isLoading ? (
+          <div className="loading-message">Loading availability...</div>
+        ) : (
+          <Calendar
+            localizer={localizer}
+            events={calendarEvents()}
+            defaultView="week"
+            views={[ 'week' ]}
+            date={localDate}
+            onNavigate={handleNavigate}
+            style={{ height: 500 }}
+            min={new Date(0,0,0,8,0)}
+            max={new Date(0,0,0,20,0)}
+            eventPropGetter={eventStyleGetter}
+            selectable
+            onSelectEvent={handleSelectEvent}
+          />
+        )}
+      </div>
+      {selectedEvent && (
+        <button className="confirm-button next-button mt-4" onClick={onSubmit}>
+          Confirm
+        </button>
+      )}
+    </div>
+  );
+};
+
 
 
   const getWeekRange = (date = new Date(), weekStartsOn = 1) => {

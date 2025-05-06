@@ -43,7 +43,6 @@ const AvailabilityManager = ({
         const fetchData = async () => {
         if (!employeeId) return;
         try {
-            //const { start, end } = getWeekRange(localDate);
             const start = moment(localDate).startOf('isoWeek').format('YYYY-MM-DD');
             const end   = moment(localDate).endOf('isoWeek').format('YYYY-MM-DD');
             

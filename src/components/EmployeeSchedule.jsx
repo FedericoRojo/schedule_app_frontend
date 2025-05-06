@@ -4,6 +4,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '../styles/EmployeeSchedule.css';
 import { AuthContext } from './AuthContext';
 import AvailabilityManager from './AvailabilityManager';
+import AppointmentManager from './AppointmentManager'
 
 const EmployeeSchedule = ({ localizer }) => {
   const {user} = useContext(AuthContext)
@@ -62,9 +63,8 @@ const EmployeeSchedule = ({ localizer }) => {
 
       <div className="main-content">
         {activeTab === 'appointments' ? (
-          <AppointmentsSection 
-            appointments={appointments}
-            onCancelAppointment={(id) => {/* Lógica de cancelación */}}
+          <AppointmentManager 
+            employeeId={user.id}
           />
         ) : (
           <AvailabilitySection 
