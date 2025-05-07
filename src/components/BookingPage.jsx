@@ -7,6 +7,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const localizer = momentLocalizer(moment);
 
+
 const BookingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState(null);
@@ -42,7 +43,6 @@ const BookingPage = () => {
           }
         );
         const specialistsData = await specialistsResponse.json();
-
         setServices(servicesData.result);
         setSpecialists(specialistsData.result);
       } catch (error) {
@@ -139,6 +139,7 @@ const BookingPage = () => {
             specialists={specialists}
             selectedSpecialist={selectedSpecialist}
             onSelect={handleSpecialistSelect}
+            selectedService={selectedService}
             onBack={() => setCurrentStep(1)}
           />
         )}
@@ -198,22 +199,31 @@ const ServiceStep = ({ services, selectedService, onSelect }) => (
   </div>
 );
 
-const SpecialistStep = ({ specialists, selectedSpecialist, onSelect, onBack }) => (
+const ofreceElServicio = (serviciosDelEspecialista, servicioElegido) => {
+  return serviciosDelEspecialista.some(elem => elem.service_id == servicioElegido.id );
+}
+
+const SpecialistStep = ({ specialists, selectedSpecialist, onSelect, onBack, selectedService }) => (
   <div className="step-wrapper">
     <h2>Select a Specialist</h2>
     <button className="back-button" onClick={onBack}>
       ← Back to Services
     </button>
     <div className="card-grid">
-      {specialists.map((specialist) => (
-        <div 
-          key={specialist.id}
-          className={`card ${selectedSpecialist?.id === specialist.id ? 'selected' : ''}`}
-          onClick={() => onSelect(specialist)}
-        >
-          <h3>{specialist.first_name} {specialist.last_name}</h3>
-        </div>
-      ))}
+      {specialists.map((specialist) => {
+        if(ofreceElServicio(specialist.services, selectedService)){
+          return( 
+            <div 
+              key={specialist.id}
+              className={`card ${selectedSpecialist?.id === specialist.id ? 'selected' : ''}`}
+              onClick={() => onSelect(specialist)}
+            >
+              <h3>{specialist.first_name} {specialist.last_name}</h3>
+            </div>
+          )
+        }
+      }
+      )}
     </div>
   </div>
 );
@@ -345,6 +355,7 @@ const TimeStep = ({
       status: slot.status,
       resource: slot
     })) 
+    console.log(result);
 
     return result;
 

@@ -51,6 +51,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (email, password, name, lastName, phoneNumber) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email, 
+          password,
+          firstName: name,
+          lastName,
+          phoneNumber 
+        }),
+      });
+      if (response.ok) {
+        navigate('/login'); 
+      } else {
+        const errorData = await response.json();
+        throw new Error('Register failed, ', errorData.errors);
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
@@ -58,7 +84,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, register}}>
       {children}
     </AuthContext.Provider>
   );

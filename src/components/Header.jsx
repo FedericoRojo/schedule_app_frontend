@@ -36,7 +36,7 @@ function Header({}){
                     Profile
                   </div>
                   {
-                    user.role >= 1 && (
+                    user.role == 1 && (
                       <div 
                         className="dropdown-item"
                         onClick={() => {
@@ -49,7 +49,7 @@ function Header({}){
                     ) 
                   }
                   {
-                    user.role >= 2 && (
+                    user.role == 2 && (
                       <div 
                         className="dropdown-item"
                         onClick={() => {
@@ -57,7 +57,7 @@ function Header({}){
                           setIsDropdownOpen(false);
                         }}
                       >
-                        Administración general
+                        Administración
                       </div>
                     ) 
                   }
@@ -65,7 +65,7 @@ function Header({}){
                   <div 
                     className="dropdown-item"
                     onClick={() => {
-                      console.log('Logging out...');
+                      logout();
                       setIsDropdownOpen(false);
                     }}
                   >

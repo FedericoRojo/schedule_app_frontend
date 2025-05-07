@@ -1,12 +1,7 @@
 import React, {useEffect, useState, useCallback} from 'react';
-import '../styles/AdminPage.css';
 
-/*
-Dejo en:
-la agregación de empleados que consiste en buscar empledos y poder manejar los rolesr
-*/
 
-const EmployeesSection = ({ allServices, setAllServices }) => {
+export default function EmployeesSection({ allServices, setAllServices }) {
     const [employees, setEmployees] = useState([]);
     const [newEmployee, setNewEmployee] = useState({
       firstName: '',
@@ -41,23 +36,6 @@ const EmployeesSection = ({ allServices, setAllServices }) => {
       } catch (error) {
         console.error('Error:', error);
       }
-    };
-
-    const handleEdit = (id) => {
-      setEmployees(
-        employees.map(emp => 
-          emp.id === id ? { ...emp, editing: true } : emp
-        )
-      );
-    };
-
-
-    const handleCancel = (id) => {
-      setEmployees(
-        employees.map(emp => 
-          emp.id === id ? { ...emp, editing: false } : emp
-        )
-      );
     };
 
     const handleSearchUsers = async () => {
@@ -184,7 +162,7 @@ const EmployeesSection = ({ allServices, setAllServices }) => {
                         : [
                             ...emp.services,
                             (()=>{
-                              const foundService = allServices.find(service => service.id === serviceId);
+                              const foundService = allServices?.find(service => service.id === serviceId);
                               return foundService 
                                 ? { 
                                     service_id: foundService.id,
@@ -389,7 +367,6 @@ const EmployeesSection = ({ allServices, setAllServices }) => {
         </div>
       );
 };
-export default EmployeesSection;
 
 const EmployeeRow = React.memo(({ 
     employee,
@@ -478,7 +455,7 @@ const EmployeeRow = React.memo(({
             ) : (
               draft.services.map(service => (
                 <div key={service.service_id} className="service-tag">
-                  {allServices.find(s => s.id === service.service_id)?.name}
+                  {allServices?.find(s => s.id === service.service_id)?.name}
                 </div>
               ))
             )}

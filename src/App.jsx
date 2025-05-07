@@ -6,9 +6,10 @@ import LoginPage from "./components/LoginPage.jsx";
 import {AuthProvider} from "./components/AuthContext.jsx"
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import BookingPage from "./components/BookingPage.jsx"
-import EmployeesSection from "./components/EmployeesSection.jsx";
+import EmployeesSection from "./components/AdminSections/EmployeesSection.jsx";
 import EmployeeSchedule from "./components/EmployeeSchedule.jsx";
-
+import AdminPage from './components/AdminPage.jsx'
+import RegisterPage from './components/RegisterPage.jsx';
 
 function App() {
 
@@ -19,7 +20,7 @@ function App() {
         <Header />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          { /* <Route path="/register" element={<RegisterPage />} /> */}
+          <Route path="/register" element={<RegisterPage />} /> 
           <Route path="/" element={<ProtectedRoute>
                                       <HomePage />
                                    </ProtectedRoute> }
@@ -29,7 +30,7 @@ function App() {
                                       </ProtectedRoute> }
           />
           <Route path="/admin" element={<ProtectedRoute> 
-                                          <EmployeesSection/>
+                                          <AdminPage/>
                                         </ProtectedRoute>}/>
           <Route path="/admin/employee" element={
                                         <ProtectedRoute>
