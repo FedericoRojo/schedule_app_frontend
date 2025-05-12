@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import {strings} from './../../locales/es.js'
 
 export default function ServicesSection ({services, setServices, fetchServices}) {
-    const [newService, setNewService] = useState({ name: '', price: null, duration: null });
+    const [newService, setNewService] = useState({ name: '', price: '', duration: '' });
     const [deletingServiceId, setDeletingServiceId] = useState(null);
     const [showHandleAddService, setShowHandleAddService] = useState(false);
     const [firstServicesLoad, setFirstServicesLoad] = useState(false);
@@ -140,21 +141,19 @@ export default function ServicesSection ({services, setServices, fetchServices})
   
     return (
       <div>
-        <h2>Servicios</h2>
-        
-        {/* Formulario para agregar nuevo servicio */}
+        <h2>{strings.ADMIN_PAGE.SERVICES_SECTION.TITLE}</h2>
         { showHandleAddService ?
          (<div style={{ marginBottom: '20px' }}>
             <input
               type="text"
-              placeholder="Nombre del servicio"
+              placeholder={strings.ADMIN_PAGE.SERVICES_SECTION.PLACEHOLDERS.NAME}
               value={newService.name}
               onChange={(e) => setNewService({...newService, name: e.target.value})}
               className="edit-input"
             />
             <input
               type="number"
-              placeholder="Precio"
+              placeholder={strings.ADMIN_PAGE.SERVICES_SECTION.PLACEHOLDERS.PRICE}
               value={newService.price}
               onChange={(e) => setNewService({...newService, price: e.target.value})}
               className="edit-input"
@@ -162,20 +161,20 @@ export default function ServicesSection ({services, setServices, fetchServices})
             />
              <input
               type="number"
-              placeholder="Duracion"
+              placeholder={strings.ADMIN_PAGE.SERVICES_SECTION.PLACEHOLDERS.DURATION}
               value={newService.duration}
               onChange={(e) => setNewService({...newService, duration: e.target.value})}
               className="edit-input"
               style={{ margin: '0 10px' }}
             />
             <button onClick={handleAddService} className="action-button confirm-button">
-              Confirmar
+              {strings.ADMIN_PAGE.SERVICES_SECTION.BUTTONS.CONFIRM}
             </button>
           </div>) 
          : 
          (<div>
             <button onClick={handleShowAddService} className="action-button confirm-button">
-              Agregar Servicio
+             {strings.ADMIN_PAGE.SERVICES_SECTION.BUTTONS.ADD}
             </button>
          </div>)}
         
@@ -184,9 +183,9 @@ export default function ServicesSection ({services, setServices, fetchServices})
         <table className="services-table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Duracion</th>
-              <th>Precio</th>
+                <th>{strings.ADMIN_PAGE.SERVICES_SECTION.TABLE_HEADERS.NAME}</th>
+                <th>{strings.ADMIN_PAGE.SERVICES_SECTION.TABLE_HEADERS.DURATION}</th>
+                <th>{strings.ADMIN_PAGE.SERVICES_SECTION.TABLE_HEADERS.PRICE}</th>
             </tr>
           </thead>
           <tbody>
@@ -229,13 +228,13 @@ export default function ServicesSection ({services, setServices, fetchServices})
                         onClick={() => handleSave(service.id)}
                         className="action-button confirm-button"
                       >
-                        Confirmar
+                        {strings.ADMIN_PAGE.SERVICES_SECTION.BUTTONS.CONFIRM}
                       </button>
                       <button
                         onClick={() => handleCancel(service.id)}
                         className="action-button cancel-button"
                       >
-                        Cancelar
+                        {strings.ADMIN_PAGE.SERVICES_SECTION.BUTTONS.CANCEL}
                       </button>
                     </>
                   ) : (
@@ -244,13 +243,13 @@ export default function ServicesSection ({services, setServices, fetchServices})
                         onClick={() => handleEdit(service.id)}
                         className="action-button edit-button"
                       >
-                        Editar
+                         {strings.ADMIN_PAGE.SERVICES_SECTION.BUTTONS.EDIT}
                       </button>
                       <button
                         onClick={() => handleDelete(service.id)}
                         className="action-button delete-button"
                       >
-                        Eliminar
+                        {strings.ADMIN_PAGE.SERVICES_SECTION.BUTTONS.DELETE}
                       </button>
                     </>
                   )}
@@ -260,23 +259,22 @@ export default function ServicesSection ({services, setServices, fetchServices})
           </tbody>
         </table>
   
-        {/* Modal de confirmación de eliminación */}
         {deletingServiceId && (
           <div className="confirmation-modal">
             <div className="modal-content">
-              <h3>¿Estás seguro de eliminar este servicio?</h3>
+              <h3>{strings.ADMIN_PAGE.SERVICES_SECTION.MODAL.TITLE}</h3>
               <div className="modal-buttons">
                 <button
                   onClick={handleConfirmDelete}
                   className="action-button delete-button"
                 >
-                  Confirmar
+                  {strings.ADMIN_PAGE.SERVICES_SECTION.MODAL.CONFIRM}
                 </button>
                 <button
                   onClick={() => setDeletingServiceId(null)}
                   className="action-button cancel-button"
                 >
-                  Cancelar
+                   {strings.ADMIN_PAGE.SERVICES_SECTION.MODAL.CANCEL}
                 </button>
               </div>
             </div>

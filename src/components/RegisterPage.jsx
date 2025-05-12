@@ -1,6 +1,8 @@
 import { useState, useContext } from 'react';
-import { AuthContext } from './AuthContext';
 import '../styles/RegisterPage.css';
+import {strings} from '../locales/es.js';
+import { ValidationError } from '../utils/error.js';
+import { useNavigate } from 'react-router-dom';
 
 function RegisterPage() {
   const [name, setName] = useState('');
@@ -9,73 +11,104 @@ function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { register } = useContext(AuthContext);
+  
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await register(email, password, name, lastName, phoneNumber);
     } catch (err) {
-      setError('Invalid input');
+      if (err instanceof ValidationError) {
+        setError(err.errors)
+      }else{
+        setError([{msg: 'Invalid input'}]);
+      }
     }
   };
 
+   const register = async (emailInput, passwordInput, nameInput, lastNameInput, phoneNumberInput) => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/users/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: emailInput, 
+            password: passwordInput,
+            firstName: nameInput,
+            lastName: lastNameInput,
+            phoneNumber: phoneNumberInput 
+          }),
+        });
+        if (response.ok) {
+          navigate('/login'); 
+        } else {
+          const errorData = await response.json();
+          throw new ValidationError('Register failed',  errorData.errors);
+        }
+      } catch (error) {
+        throw error;
+      }
+    };
+
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="login-title">Login</h1>
-        
-        {error && <p className="login-error">{error}</p>}
+  <div className="login-container">
+    <div className="login-card">
+      <h1 className="login-title">{strings.REGISTER_PAGE.TITLE}</h1>
+      
+      {error && 
+      (error.map(elem =>  <p className="login-error" key={elem.msg}>{elem.msg}</p>))
+      }
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <input 
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <input 
-            type="text"
-            placeholder="Last name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="login-input"
-            required
-          />
-          <input 
-            type="number"
-            placeholder='Phone number'
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="login-input"
-            required
-          />
-          <button type="submit" className="login-button">
-            Sign In
-          </button>
-        </form>
+      <form onSubmit={handleSubmit} className="login-form">
+        <input 
+          type="text"
+          placeholder={strings.REGISTER_PAGE.NAME_PLACEHOLDER}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input 
+          type="text"
+          placeholder={strings.REGISTER_PAGE.LASTNAME_PLACEHOLDER}
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+        />
+        <input
+          type="email"
+          placeholder={strings.REGISTER_PAGE.EMAIL_PLACEHOLDER}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="login-input"
+          required
+        />
+        <input 
+          type="number"
+          placeholder={strings.REGISTER_PAGE.PHONE_PLACEHOLDER}
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder={strings.REGISTER_PAGE.PASSWORD_PLACEHOLDER}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="login-input"
+          required
+        />
+        <button type="submit" className="login-button">
+          {strings.REGISTER_PAGE.BUTTON_TEXT}
+        </button>
+      </form>
 
-        <p className="login-footer">
-          Already have an account? <a href="/login">Login</a>
-        </p>
-      </div>
+      <p className="login-footer">
+        {strings.REGISTER_PAGE.FOOTER_TEXT} <a href="/login">{strings.REGISTER_PAGE.LOGIN_LINK}</a>
+      </p>
     </div>
-  );
+  </div>
+);
 }
 
 export default RegisterPage;

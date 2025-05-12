@@ -3,6 +3,11 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'moment/locale/es'; 
+import {calculateAvailableSlotsExcludingAppointments} from '../../utils/format.js';
+import {getAppointments} from '../../services/appointment.js';
+import {getAvailabilities} from '../../services/availability.js'
+import '../../styles/AppointmentManager.css';
+import {strings} from '../../locales/es.js'
 
 
 moment.updateLocale('es', {
@@ -27,31 +32,28 @@ const AppointmentManager = ({
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [localDate]);
+
+  const getWeekRange = (localDate) => {
+            const today = moment().startOf('day');
+            const weekStart = moment(localDate).startOf('isoWeek');
+            const start = weekStart.isBefore(today) ? today.format('YYYY-MM-DD') : weekStart.format('YYYY-MM-DD');
+            
+            const end   = moment(localDate).endOf('isoWeek').format('YYYY-MM-DD');
+  
+            return {start, end}
+      }
 
   const fetchData = async () => {
     try {
-        const start = moment(localDate).startOf('isoWeek').format('YYYY-MM-DD');
-        const end   = moment(localDate).endOf('isoWeek').format('YYYY-MM-DD');
-        
-        const token = localStorage.getItem('token');
-        const availabilityResponse = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/availability/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`, {
-                headers: {
-                    'Authorization': token,
-                    'Content-Type': 'application/json'
-                }
-            })
-        const appointmetsResponse = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/appointment/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`, {
-                headers: {
-                    'Authorization': token,
-                    'Content-Type': 'application/json'
-                }
-            })
-        
+        const {start, end} = getWeekRange(localDate);
 
+        const availabilityResponse = await getAvailabilities(employeeId, start, end)
+        const appointmetsResponse = await getAppointments(employeeId, start, end)
+        
         const availabilityData = await availabilityResponse.json();
         const appointmentData = await appointmetsResponse.json();
-
+        console.log(appointmentData.result);
         setAvailability(availabilityData.result);
         setAppointments(appointmentData.result);
     } catch (error) {
@@ -59,97 +61,11 @@ const AppointmentManager = ({
     }
   };
 
-  const subtractAppointmentsFromAvailability = (availability, appointments) => {
-    let newSlots = availability.map(slot => ({ ...slot }));
-    
-    
-    if(appointments.length > 0){
-
-      appointments.forEach(appt => {
-        const temp = [];
-        const dateOnly = moment.utc(appt.date).format('YYYY-MM-DD');
-        const startA = moment.utc(`${dateOnly}T${appt.startTime}`);
-        const endA = moment.utc(`${dateOnly}T${appt.endTime}`);
-        
-        newSlots.forEach(slot => {
-          const slotDateOnly = moment.utc(slot.date).format('YYYY-MM-DD');
-          const startS = moment.utc(`${slotDateOnly}T${slot.start_time}`);
-          const endS = moment.utc(`${slotDateOnly}T${slot.end_time}`);
-
-          if (!startA.isSame(startS, 'day') || endA.isSameOrBefore(startS) || startA.isSameOrAfter(endS)) {
-            temp.push(slot);
-          } else {
-            const overlapStart = moment.max(startA, startS);
-            const overlapEnd = moment.min(endA, endS);
-
-            if (startS.isBefore(overlapStart)) 
-              temp.push({ 
-                    id: `${slot.id}-pre-${startS.valueOf()}`,
-                    date: slot.date, 
-                    start_time: startS.format('HH:mm:ss'),
-                    end_time: overlapStart.format('HH:mm:ss') });
-            if (overlapEnd.isBefore(endS))
-               temp.push({ 
-                    id: `${slot.id}-post-${overlapEnd.valueOf()}`,
-                    date: slot.date, 
-                    start_time: overlapEnd.format('HH:mm:ss'), 
-                    end_time: endS.format('HH:mm:ss') });
-          
-          }
-
-        });
-
-        newSlots = temp;
-      });
-
-    }
-
-    return newSlots;
-  };
-
-  const events = useMemo(() => {
-    const result = [];
-    
-    let newAvailability = subtractAppointmentsFromAvailability(availability, appointments);
-
-    if (newAvailability != null && newAvailability.length != 0) {
-      newAvailability.forEach(slot => {
-          const datePart = moment.utc(slot.date).format('YYYY-MM-DD'); 
-          const start = moment.utc(`${datePart}T${slot.start_time}`).local().toDate();
-          const end = moment.utc(`${datePart}T${slot.end_time}`).local().toDate();
-          result.push({
-            id: `avail-${slot.id}`,
-            start: start,
-            end: end,
-            title: 'Available',
-            status: 'availability'
-          });
-      });
-    }
-  
-    if (appointments != null && appointments.length != 0) {
-      appointments.forEach(appt => {
-        const datePart = moment.utc(appt.date).format('YYYY-MM-DD'); 
-        const start = moment.utc(`${datePart}T${appt.startTime}`).local().toDate();
-        const end = moment.utc(`${datePart}T${appt.endTime}`).local().toDate();
-
-        result.push({
-          id: `appt-${appt.id}`,
-          start: start,
-          end: end,
-          title: appt.service.name,
-          status: 'appointment'
-        });
-      });
-    }
-    console.log(result);
-    return result;
-  }, [availability, appointments]);
 
   const buildEvents = () => {
     const result = [];
     
-    let newAvailability = subtractAppointmentsFromAvailability(availability, appointments);
+    let newAvailability = calculateAvailableSlotsExcludingAppointments(availability, appointments);
 
     if (newAvailability != null && newAvailability.length != 0) {
       newAvailability.forEach(slot => {
@@ -172,7 +88,7 @@ const AppointmentManager = ({
         const datePart = moment.utc(appt.date).format('YYYY-MM-DD'); 
         const start = moment.utc(`${datePart}T${appt.startTime}`).local().toDate();
         const end = moment.utc(`${datePart}T${appt.endTime}`).local().toDate();
-
+        
         result.push({
           id: `appt-${appt.id}`,
           start: start,
@@ -183,9 +99,11 @@ const AppointmentManager = ({
         });
       });
     }
-    console.log(result);
     return result;
   }
+
+  
+  const events = useMemo(() => buildEvents(), [availability, appointments]);
   
 
   const eventStyleGetter = (event) => {
@@ -199,19 +117,37 @@ const AppointmentManager = ({
   };
 
   const onSelectEvent = (event) => {
-    setSelectedEvent(event.data);
-    setShowModal(true);
+
+    if(event.resource.client != null){
+      console.log(event);
+      setSelectedEvent({
+        user: event.resource.client.name,
+        phone: event.resource.client.phone,
+        service: event.resource.service.name,
+        duration: event.resource.service.duration,
+        start: moment(event.start).format('HH:mm'),
+        end: moment(event.end).format('HH:mm'),
+        date: moment(event.start).format('YYYY-MM-DD'),
+
+      })
+      setShowModal(true);
+    }
   };
 
-   
+  const handleNavigate = (newDate) => {
+    const monday = moment(newDate).startOf('isoWeek').toDate();
+    setLocalDate(monday);
+  };
 
   return (
     <div className="p-4">
-      {console.log(events)}
       
       <Calendar
+        onNavigate={handleNavigate}
+        culture='es'
+        date={localDate}
         localizer={localizer}
-        events={buildEvents()}
+        events={events}
         defaultView="week"
         views={['day', 'week', 'month']}
         step={15}
@@ -221,6 +157,14 @@ const AppointmentManager = ({
         style={{ height: '80vh' }}
         eventPropGetter={eventStyleGetter}
         onSelectEvent={onSelectEvent}
+         messages={{
+                      next: strings.CALENDAR.NEXT,
+                      previous: strings.CALENDAR.PREVIOUS,
+                      today: strings.CALENDAR.TODAY,
+                      month: strings.CALENDAR.MONTH,
+                      week: strings.CALENDAR.WEEK,
+                      day: strings.CALENDAR.DAY,
+        }}
       />
 
       {showModal && (
@@ -235,8 +179,62 @@ const AppointmentManager = ({
 
 export default AppointmentManager;
 
-const EventDetailsModal = ( ) => {
-  return (<></>)
+const EventDetailsModal = ({event, onClose}) => {
+  if (!event) return null
+
+  return (
+    <div className="edm-overlay">
+  <div className="edm-container">
+    <h2 className="edm-title">
+      {strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.TITLE}
+    </h2>
+    
+    <div className="edm-content">
+      <p>
+        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.SERVICE}:</strong> 
+        {event.service || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.SERVICE}
+      </p>
+      
+      <p>
+        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.DATE}:</strong> 
+        {event.date?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.DESCRIPTION}
+      </p>
+      
+      <p>
+        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.START}:</strong> 
+        {event.start?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.START_DATE}
+      </p>
+      
+      <p>
+        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.END}:</strong> 
+        {event.end?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.END_DATE}
+      </p>
+      
+      <p>
+        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.DURATION}:</strong> 
+        {event.duration || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.DESCRIPTION} 
+        {strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.UNITS.DURATION}
+      </p>
+
+      <p>
+        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.USER}:</strong> 
+        {event.user || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.USER_NAME}
+      </p>
+      
+      <p>
+        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.PHONE}:</strong> 
+        {event.phone || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.USER_PHONE}
+      </p>
+    </div>
+
+    <div className="edm-actions">
+      <button onClick={onClose} className="edm-close-button">
+        {strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.BUTTONS.CLOSE}
+      </button>
+    </div>
+  </div>
+</div>
+  )
 }
 
   

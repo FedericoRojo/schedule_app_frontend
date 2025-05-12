@@ -10,6 +10,7 @@ import EmployeesSection from "./components/AdminSections/EmployeesSection.jsx";
 import EmployeeSchedule from "./components/EmployeeSchedule.jsx";
 import AdminPage from './components/AdminPage.jsx'
 import RegisterPage from './components/RegisterPage.jsx';
+import ProfilePage from './components/ProfilePage.jsx';
 
 function App() {
 
@@ -36,6 +37,10 @@ function App() {
                                         <ProtectedRoute>
                                           <EmployeeSchedule />
                                         </ProtectedRoute>}/>
+
+          <Route path="/profile" element={<ProtectedRoute>
+                                            <ProfilePage />
+                                          </ProtectedRoute>}/>
         </Routes>
       
     </AuthProvider>

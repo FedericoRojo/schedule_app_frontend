@@ -1,10 +1,13 @@
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useMemo } from 'react';
 import moment from 'moment';
 import ModeSelector from './ModeSelector';
 import 'moment/locale/es'; 
+import {  getAvailabilities} from '../../services/availability.js'
+import '../../styles/AvailabilityManager.css';
+import {strings} from '../../locales/es.js'
 
 
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -29,41 +32,48 @@ const AvailabilityManager = ({
     const [deleteTarget, setDeleteTarget] = useState(null);
 
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     
     const [localDate, setLocalDate] = useState(selectedDate || new Date());
-
+    
     moment.updateLocale('es', {
       week: { dow: 1 }               // dow = day of week: lunes=1 … domingo=7
     });
-    moment.locale('es');
+    moment.locale('es'); 
     const localizer = momentLocalizer(moment);
+
+    const getWeekRange = (localDate) => {
+          const today = moment().startOf('day');
+          const weekStart = moment(localDate).startOf('isoWeek');
+          const start = weekStart.isBefore(today) ? today.format('YYYY-MM-DD') : weekStart.format('YYYY-MM-DD');
+          
+          const end   = moment(localDate).endOf('isoWeek').format('YYYY-MM-DD');
+
+          return {start, end}
+    }
+
+    const fetchData = async () => {
+      if (!employeeId) return;
+      try {
+          
+          const {start, end} = getWeekRange(localDate);
+
+          const availResponse = await getAvailabilities(employeeId, start, end)
+         
+          const availabilityData = await availResponse.json();
+          setAvailability(availabilityData.result);
+
+      } catch (error) {
+          console.error('Fetch error:', error);
+      } finally {
+          setIsLoading(false);
+      }
+    };
     
     useEffect(() => {
-        const fetchData = async () => {
-        if (!employeeId) return;
-        try {
-            const start = moment(localDate).startOf('isoWeek').format('YYYY-MM-DD');
-            const end   = moment(localDate).endOf('isoWeek').format('YYYY-MM-DD');
-            
-            const token = localStorage.getItem('token');
-            const availResponse = await fetch(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/availability/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`,
-            {headers: {
-                'Authorization': token,
-                'Content-Type': "application-json"
-            }}
-            );
-            const availabilityData = await availResponse.json();
-            setAvailability(availabilityData.result);
-        } catch (error) {
-            console.error('Fetch error:', error);
-        } finally {
-            setIsLoading(false);
-        }
-        };
         fetchData();
-    }, [localDate]); 
+    }, [localDate, currentMode]); 
     
     
     function toCalendarEvent(slot){
@@ -76,13 +86,13 @@ const AvailabilityManager = ({
             title: slot.title || 'Disponible',
             start: base.clone().set({hour: h1, minute:m1}).local().toDate(),
             end: base.clone().set({hour:h2, minute:m2}).local().toDate(),
-            isAvailability: true,
-            //Faltan estilos por defecto
+            isAvailability: true
         }
     }
     
     function buildEvents(){
         let events = availability.map(toCalendarEvent);
+        
         if(editTarget){
             events = events.map( event => {
                 if(event.id === editTarget.original.id){
@@ -97,6 +107,7 @@ const AvailabilityManager = ({
                 }
             })
         }
+
     
         if (addTarget) {
           const previews = Array.isArray(addTarget.slots)
@@ -106,7 +117,7 @@ const AvailabilityManager = ({
           
           previews.forEach(slot => {
             events.push({
-              id: `new-${slot.start.getTime()}`,  // o cualquier ID único temporal
+              id: `new-${slot.start.getTime()}`,
               title: 'Nuevo turno',
               start: slot.start,
               end:   slot.end,
@@ -131,6 +142,13 @@ const AvailabilityManager = ({
         return events
     }
 
+    
+    const events = useMemo(() => buildEvents(), [
+      availability,
+      editTarget,
+      addTarget,
+      deleteTarget
+    ]);
     
     const isCompletlyWithinAvailability = useCallback((start, end) => {
         return availability.some(slot => {
@@ -183,9 +201,6 @@ const AvailabilityManager = ({
         }
     }
 
-    
-
-    
       const createLimits = (start, end) => {
         const utcStart = moment(start).utc();
         const utcEnd   = moment(end).utc();
@@ -267,12 +282,12 @@ const AvailabilityManager = ({
             
         
             const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/availability/new`, {
-            method: 'POST',
-            headers: {
-                'Authorization': token,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ slots: formattedSlots })
+              method: 'POST',
+              headers: {
+                  'Authorization': token,
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ slots: formattedSlots })
             });
         
             if (!response.ok) throw new Error('Error en el servidor');
@@ -318,16 +333,15 @@ const AvailabilityManager = ({
                     : s
                 )
               );
-              setEditTarget(null);
+        }else{
+          const jsonError = await response.json();
+          setError(jsonError.error);
         }
-
+        setEditTarget(null);
       }catch(error){
         console.log("Error al guardar edición: ", error)
         setAvailability(originalAvailability);
       }
-
-
-
     
   }
 
@@ -348,6 +362,7 @@ const AvailabilityManager = ({
         setDeleteTarget(null);
       }else{
         const jsonError = await response.json();
+        setError(jsonError.error);
         console.log('Error en el servidor: ', jsonError);
       }
     }catch(e){
@@ -389,12 +404,27 @@ const AvailabilityManager = ({
       <ModeSelector 
         currentMode={currentMode} 
         setCurrentMode={setCurrentMode} 
-        mode={mode} />
+        mode={mode} 
+      />
+      
+      {error != null && (
+        <div className="error-message">
+          {error}
+          <button 
+            className="error-close-btn" 
+            onClick={() => setError(null)} 
+            aria-label={strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.ERROR.CLOSE_ARIA}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <DnDCalendar
         date={localDate}
         localizer={localizer}
-        events={buildEvents()}
+        culture='es'
+        events={events}
         defaultView='week'
         views={['week']}
         onNavigate={handleNavigate}
@@ -408,25 +438,46 @@ const AvailabilityManager = ({
         onEventDrop={handleEventDrop}
         draggableAccessor={event => currentMode === mode.EDIT && event.isAvailability}
         resizableAccessor={event => currentMode === mode.EDIT && event.isAvailability}
+        messages={{
+          next: strings.CALENDAR.NEXT,
+          previous: strings.CALENDAR.PREVIOUS,
+          today: strings.CALENDAR.TODAY,
+          month: strings.CALENDAR.MONTH,
+          week: strings.CALENDAR.WEEK,
+          day: strings.CALENDAR.DAY,
+        }}
       />
 
-      
       {currentMode === 'add' && addTarget && (
         <div className="action-bar">
-          <button onClick={confirmAdd}>Confirmar</button>
-          <button onClick={() => setAddTarget(null)}>Cancelar</button>
+          <button onClick={confirmAdd}>
+            {strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.BUTTONS.CONFIRM}
+          </button>
+          <button onClick={() => setAddTarget(null)}>
+            {strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.BUTTONS.CANCEL}
+          </button>
         </div>
       )}
+      
       {currentMode === 'edit' && editTarget && (
         <div className="action-bar">
-          <button onClick={confirmEdit}>Confirmar</button>
-          <button onClick={() => setEditTarget(null)}>Cancelar</button>
+          <button onClick={confirmEdit}>
+            {strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.BUTTONS.CONFIRM}
+          </button>
+          <button onClick={() => setEditTarget(null)}>
+            {strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.BUTTONS.CANCEL}
+          </button>
         </div>
       )}
+      
       {currentMode === 'delete' && deleteTarget && (
         <div className="action-bar">
-          <button onClick={confirmDelete}>Confirmar</button>
-          <button onClick={() => setDeleteTarget(null)}>Cancelar</button>
+          <button onClick={confirmDelete}>
+            {strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.BUTTONS.DELETE}
+          </button>
+          <button onClick={() => setDeleteTarget(null)}>
+            {strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.BUTTONS.CANCEL}
+          </button>
         </div>
       )}
     </div>

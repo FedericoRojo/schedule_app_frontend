@@ -1,4 +1,5 @@
 import React, {useEffect, useState, useCallback} from 'react';
+import {strings} from './../../locales/es.js';
 
 
 export default function EmployeesSection({ allServices, setAllServices }) {
@@ -15,6 +16,7 @@ export default function EmployeesSection({ allServices, setAllServices }) {
     const [searchFirstName, setSearchFirstName] = useState('');
     const [searchLastName, setSearchLastName] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    const [hasSearched, setHasSearched] = useState(false);
     const [modifiedRoles, setModifiedRoles] = useState({});
 
 
@@ -59,75 +61,7 @@ export default function EmployeesSection({ allServices, setAllServices }) {
       }
     };
     
-    const handleRoleChange = (userId, newRole) => {
-      setModifiedRoles(prev => ({
-        ...prev,
-        [userId]: parseInt(newRole)
-      }));
-    };
     
-    const handleSaveRole = async (userId) => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/users/${userId}/role`,
-          {
-            method: 'PUT',
-            headers: {
-              'Authorization': token,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              role: modifiedRoles[userId]
-            })
-          }
-        );
-    
-        if (!response.ok) throw new Error('Error actualizando rol');
-        
-        setSearchResults(prev => prev.map(user => 
-          user.id === userId ? { ...user, role: modifiedRoles[userId] } : user
-        ));
-
-        setModifiedRoles(prev => {
-          const newState = { ...prev };
-          delete newState[userId];
-          return newState;
-        });
-
-        fetchEmployees();
-
-    
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    };
-
-    const handleAddEmployee = async () => {
-      if (!newEmployee.firstName || !newEmployee.lastName) return;
-
-      try {
-        const response = await fetch('API_URL/employees', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newEmployee)
-        });
-
-        if (!response.ok) throw new Error('Error agregando empleado');
-        
-        await fetchEmployees();
-        setShowAddModal(false);
-        setNewEmployee({ 
-          firstName: '', 
-          lastName: '', 
-          role: 0, 
-          services: [] 
-        });
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    };
-
     const confirmDelete = async () => {
       if (!deletingEmployeeId) return;
 
@@ -178,34 +112,60 @@ export default function EmployeesSection({ allServices, setAllServices }) {
         );
       }, []);
     
-      const handleUpdateSave = useCallback(async (updatedEmployee) => {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch(
-            `${import.meta.env.VITE_APP_API_BASE_URL}/users/update/${updatedEmployee.id}`, 
-            {
-              method: 'PUT',
-              headers: { 
-                'Authorization': token,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                firstName: updatedEmployee.first_name,
-                lastName: updatedEmployee.last_name,
-                role: updatedEmployee.role,
-                services: updatedEmployee.services.map(s => s.service_id) 
-              })
-            }
-          );
-          
-          if (!response.ok) throw new Error('Error actualizando empleado');
-          
-          await fetchEmployees();
+    const handleUpdateSave = useCallback(async (updatedEmployee) => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+          `${import.meta.env.VITE_APP_API_BASE_URL}/users/update/${updatedEmployee.id}`, 
+          {
+            method: 'PUT',
+            headers: { 
+              'Authorization': token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              firstName: updatedEmployee.first_name,
+              lastName: updatedEmployee.last_name,
+              role: updatedEmployee.role,
+              services: updatedEmployee.services.map(s => s.service_id) 
+            })
+          }
+        );
+        
+        if (!response.ok) throw new Error('Error actualizando empleado');
+        
+        await fetchEmployees();
 
-        } catch (error) {
-          console.error('Error:', error);
-        }
-      }, [fetchEmployees]);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }, [fetchEmployees]);
+
+    const updateRole = async (updatedEmployee) => {
+        try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+          `${import.meta.env.VITE_APP_API_BASE_URL}/users/upgrade/${updatedEmployee.id}`, 
+          {
+            method: 'PUT',
+            headers: { 
+              'Authorization': token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              role: updatedEmployee.role
+            })
+          }
+        );
+        
+        if (!response.ok) throw new Error('Error actualizando empleado');
+        
+        await fetchEmployees();
+
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
 
       const handleDelete = useCallback(async (id) => {
         setDeletingEmployeeId(id);
@@ -221,157 +181,196 @@ export default function EmployeesSection({ allServices, setAllServices }) {
 
       return (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>Empleados</h2>
-            <button 
-              onClick={() => setShowSearchModal(true)}
-              className="action-button confirm-button"
-            >
-              + Agregar Empleado
-            </button>
-          </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2>Empleados</h2>
+              <button 
+                onClick={() => setShowSearchModal(true)}
+                className="action-button confirm-button"
+              >
+                + Agregar Empleado
+              </button>
+            </div>
+      
+            <EmployeeTable employees={employees} allServices={allServices} handleUpdateSave={handleUpdateSave}
+              handleDelete={handleDelete} handleServiceToggle={handleServiceToggle} 
+            />
     
-          <table className="employee-table">
+            {showSearchModal && (
+                <SearchComponent searchFirstName={searchFirstName} setSearchFirstName={setSearchFirstName}
+                 searchLastName={searchLastName} setSearchLastName={setSearchLastName}
+                 handleSearchUsers={handleSearchUsers} handleCloseSearch={handleCloseSearch} 
+                 searchResults={searchResults} hasSearched={hasSearched} setHasSearched={setHasSearched}
+                 modifiedRoles={modifiedRoles} updateRole={updateRole}/>
+            )}
+
+            {deletingEmployeeId && (
+                <DeleteModal confirmDelete={confirmDelete} setDeletingEmployeeId={setDeletingEmployeeId}/>
+            )}
+        </div>
+      );
+};
+
+const EmployeeTable = ({employees, allServices, handleUpdateSave, handleDelete, handleServiceToggle}) => {
+  return (
+      <table className="employee-table">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                <th>Rol</th>
-                <th>Servicios</th>
-                <th>Acciones</th>
+                  <th>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.TABLE_HEADERS.NAME}</th>
+                  <th>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.TABLE_HEADERS.LASTNAME}</th>
+                  <th>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.TABLE_HEADERS.ROLE}</th>
+                  <th>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.TABLE_HEADERS.SERVICES}</th>
+                  <th>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.TABLE_HEADERS.ACTIONS}</th>
               </tr>
             </thead>
             <tbody>
-                {employees.map(employee => (
+                {employees!= null && employees.length > 0 && employees.map(employee => (
                     <EmployeeRow
                         key={employee.id}
                         employee={employee}
                         allServices={allServices}
-                        onEdit={(id) => setEditingId(id)} // If you need tracking
                         onSave={handleUpdateSave}
-                        onCancel={(id) => {/* Reset logic */}}
                         onDelete={handleDelete}
                         onServiceToggle={handleServiceToggle}
                     />
                 ))}
             </tbody>
-          </table>
-    
-         {/* Search and Role Management Section */}
-          {showSearchModal && (
-            <div className="confirmation-modal">
-              <div className="add-employee-modal">
-                <h3>Buscar y Administrar Usuarios</h3>
-                
-                <div className="modal-input-group">
-                  <label>Nombre:</label>
-                  <input
-                    type="text"
-                    placeholder="Buscar por nombre..."
-                    value={searchFirstName}
-                    onChange={(e) => setSearchFirstName(e.target.value)}
-                    className="edit-input"
-                  />
-                </div>
+      </table>
+  )
+}
 
-                <div className="modal-input-group">
-                  <label>Apellido:</label>
-                  <input
-                    type="text"
-                    placeholder="Buscar por apellido..."
-                    value={searchLastName}
-                    onChange={(e) => setSearchLastName(e.target.value)}
-                    className="edit-input"
-                  />
-                </div>
-
-                <div className="modal-buttons">
-                  <button
-                    onClick={handleSearchUsers}
-                    className="action-button confirm-button"
-                    disabled={!searchFirstName && !searchLastName}
-                  >
-                    Buscar
-                  </button>
-                  <button
-                    onClick={handleCloseSearch}
-                    className="action-button cancel-button"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-
-                {/* Search Results */}
-                {searchResults.length > 0 ? 
-                  (
-                  <div className="search-results">
-                    <h4>Resultados de la búsqueda:</h4>
-                    <div className="results-list">
-                      {searchResults.map(user => (
-                        <div key={user.id} className="user-result-item">
-                          <div className="user-info">
-                            <span>{user.firstName} {user.lastName}</span>
-                          </div>
-                          
-                          <div className="role-management">
-                            <select
-                              value={modifiedRoles[user.id] ?? user.role}
-                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                              className="role-select"
-                            >
-                              <option value={0}>Usuario Normal</option>
-                              <option value={1}>Empleado</option>
-                              <option value={2}>Administrador</option>
-                            </select>
-                            
-                            <button 
-                              onClick={() => handleSaveRole(user.id)}
-                              className="action-button save-role-button"
-                            >
-                              Guardar Cambios
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="no-results">No se encontraron usuarios</p>
-                )}
-              </div>
-            </div>
-          )}
-    
-          {/* Modal confirmación eliminación */}
-          {deletingEmployeeId && (
-          <div className="confirmation-modal">
-            <div className="modal-content">
-              <h3>¿Eliminar este empleado?</h3>
-              <div className="modal-buttons">
-                <button
-                  onClick={confirmDelete}
-                  className="action-button delete-button"
-                >
-                  Confirmar
-                </button>
-                <button
-                  onClick={() => setDeletingEmployeeId(null)}
-                  className="action-button cancel-button"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
+const SearchComponent = ({searchFirstName, setSearchFirstName, searchLastName, setSearchLastName,
+        handleSearchUsers, handleCloseSearch, searchResults, hasSearched, setHasSearched, updateRole
+}) => {
+  return (
+    <div className="confirmation-modal">
+      <div className="add-employee-modal">
+          <h3>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_TITLES.SEARCH_AND_MANAGE}</h3>
+            
+          <div className="modal-input-group">
+            <label>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_LABELS.FIRST_NAME}</label>
+            <input
+                type="text"
+                placeholder={strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_PLACEHOLDERS.SEARCH_FIRST_NAME}
+                value={searchFirstName}
+                onChange={(e) => {
+                  setSearchFirstName(e.target.value)
+                  setHasSearched(false);
+                }}
+                className="edit-input"
+            />
           </div>
-        )}
+
+          <div className="modal-input-group">
+            <label>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_LABELS.LAST_NAME}</label>
+            <input
+              type="text"
+              placeholder={strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_PLACEHOLDERS.SEARCH_LAST_NAME}
+              value={searchLastName}
+                onChange={(e) => {
+                  setSearchLastName(e.target.value)
+                  setHasSearched(false);
+                }}
+                className="edit-input"
+            />
+          </div>
+
+          <div className="modal-buttons">
+            <button
+                onClick={() => {
+                  setHasSearched(true)
+                  handleSearchUsers()
+                }}
+                className="action-button confirm-button"
+                disabled={!searchFirstName && !searchLastName}
+                  
+            >
+              {strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_BUTTONS.SEARCH}
+            </button>
+            <button
+              onClick={handleCloseSearch}
+                className="action-button cancel-button"
+            >
+              {strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_BUTTONS.CLOSE}
+            </button>
+          </div>
+
+          <SearchResult searchResults={searchResults} hasSearched={hasSearched} updateRole={updateRole}/>
+          
+      </div>
+    </div>
+  )
+}
+
+const SearchResult = ({searchResults, hasSearched, updateRole}) => {
+  const [newRole, setNewRole] = useState(''); 
+  return searchResults.length > 0 ? 
+      (<div className="search-results">
+          <h4>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.SEARCH_RESULTS.TITLE}</h4>
+          <div className="results-list">
+            {searchResults.map(user => (
+              <div key={user.id} className="user-result-item">
+                <div className="user-info">
+                    <span>{user.firstName} {user.lastName}</span>
+                </div>
+                
+                <div className="role-management">
+                    <select
+                      value={newRole ?? user.role}
+                      onChange={(e) => setNewRole(e.target.value)}
+                      className="role-select"
+                    >
+                      {Object.entries(strings.ADMIN_PAGE.EMPLOYEE_SECTION.ROLE_OPTIONS).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                    
+                    <button 
+                      onClick={() => {
+                        updateRole({id: user.id, role: newRole})
+                        setNewRole('');
+                      }}
+                      className="action-button save-role-button"
+                    >
+                      Guardar Cambios
+                    </button>
+                </div>
+              </div>
+            ))}
+          </div>
+      </div>
+        ) : hasSearched ? (
+          <p className="no-results">
+            {strings.ADMIN_PAGE.EMPLOYEE_SECTION.SEARCH_RESULTS.NONE_FOUND}
+          </p>
+        ) : (<></>)
+}
+
+const DeleteModal = ({confirmDelete, setDeletingEmployeeId }) => {
+  return (
+  <div className="confirmation-modal">
+      <div className="modal-content">
+        <h3>{strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_TITLES.DELETE_CONFIRMATION}</h3>
+        <div className="modal-buttons">
+            <button
+                onClick={confirmDelete}
+                className="action-button delete-button"
+            >
+                {strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_BUTTONS.CONFIRM_DELETE}
+            </button>
+            <button
+                onClick={() => setDeletingEmployeeId(null)}
+                className="action-button cancel-button"
+            >
+                {strings.ADMIN_PAGE.EMPLOYEE_SECTION.MODAL_BUTTONS.CANCEL}
+            </button>
         </div>
-      );
-};
+      </div>
+  </div>)
+}
 
 const EmployeeRow = React.memo(({ 
     employee,
     allServices,
-    onEdit,
     onSave,
     onCancel,
     onDelete,
@@ -379,15 +378,14 @@ const EmployeeRow = React.memo(({
   }) => {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(employee);
-  
-    // Reset draft when employee prop changes
+    
+
     useEffect(() => {
       setDraft(employee);
     }, [employee]);
   
     const handleLocalEdit = () => {
       setEditing(true);
-      onEdit(employee.id);
     };
   
     const handleSave = () => {
@@ -432,8 +430,9 @@ const EmployeeRow = React.memo(({
               onChange={(e) => setDraft({...draft, role: e.target.value})}
               className="edit-input"
             >
-              <option value="1">Peluquero</option>
-              <option value="2">Admin</option>
+              {Object.entries(strings.ADMIN_PAGE.EMPLOYEE_SECTION.ROLE_OPTIONS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           ) : (
             draft.role
@@ -473,12 +472,17 @@ const EmployeeRow = React.memo(({
             </>
           ) : (
             <>
-              <button onClick={handleLocalEdit} className="action-button edit-button">
-                Editar
-              </button>
-              <button onClick={() => onDelete(employee.id)} className="action-button delete-button">
-                Eliminar
-              </button>
+              {employee.role != 2 && (
+                <>
+                  <button onClick={handleLocalEdit} className="action-button edit-button">
+                    Editar
+                  </button>
+                  <button onClick={() => onDelete(employee.id)} className="action-button delete-button">
+                    Eliminar
+                  </button>
+                </>  
+              )}
+              
             </>
           )}
         </td>

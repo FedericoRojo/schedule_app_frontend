@@ -2,11 +2,20 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/BookingPage.css';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import {calculateAvailableSlotsExcludingAppointments} from '../utils/format.js';
+import {getAvailabilities} from '../services/availability.js';
+import {getAppointments, getUserAppointments} from '../services/appointment.js';
+import {strings} from '../locales/es.js';
+import moment from 'moment';
+import 'moment/locale/es';
+
+moment.locale('es', {
+  months: 'Enero_Febrero_Marzo_Abril_Mayo_Junio_Julio_Agosto_Septiembre_Octubre_Noviembre_Diciembre'.split('_'),
+  weekdaysShort: 'Dom_Lun_Mar_Mié_Jue_Vie_Sáb'.split('_')
+});
 
 const localizer = momentLocalizer(moment);
-
 
 const BookingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -18,12 +27,18 @@ const BookingPage = () => {
   const [specialists, setSpecialists] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [personalAppointments, setPersonalAppointments] = useState([]);
   const navigate = useNavigate();
+  const minDistanceDaysBeetweenAppointments = 3;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
+
+        const apptResponse = await getUserAppointments();
+        const apptData = await apptResponse.json();
+
         const servicesResponse = await fetch(
           `${import.meta.env.VITE_APP_API_BASE_URL}/services`,
           {headers: {
@@ -43,8 +58,11 @@ const BookingPage = () => {
           }
         );
         const specialistsData = await specialistsResponse.json();
+
         setServices(servicesData.result);
         setSpecialists(specialistsData.result);
+        setPersonalAppointments(apptData.result);
+
       } catch (error) {
         console.error('Fetch error:', error);
         setError(error.message);
@@ -56,7 +74,9 @@ const BookingPage = () => {
     fetchData();
   }, []);  
 
- 
+  
+
+
 
   const handleServiceSelect = (service) => {
     setSelectedService(service);
@@ -102,37 +122,39 @@ const BookingPage = () => {
   return (
     <div className="booking-container">
       <div className="stepper">
-        <div 
-          className={`step ${currentStep >= 1 ? 'active' : ''}`} 
-          onClick={() => currentStep > 1 && setCurrentStep(1)}
-        >
-          1. Service
-        </div>
-        <div 
-          className={`step ${currentStep >= 2 ? 'active' : ''}`} 
-          onClick={() => currentStep > 2 && setCurrentStep(2)}
-        >
-          2. Specialist
-        </div>
-        <div className={`step ${currentStep >= 3 ? 'active' : ''}`}>
-          3. Date & Time
-        </div>
+          <div 
+            className={`step ${currentStep >= 1 ? 'active' : ''}`} 
+            onClick={() => currentStep > 1 && setCurrentStep(1)}
+          >
+            {strings.BOOKING_PAGE.STEPPER_LABELS[0]}
+          </div>
+          <div 
+            className={`step ${currentStep >= 2 ? 'active' : ''}`} 
+            onClick={() => currentStep > 2 && setCurrentStep(2)}
+          >
+            {strings.BOOKING_PAGE.STEPPER_LABELS[1]}
+          </div>
+          <div className={`step ${currentStep >= 3 ? 'active' : ''}`}>
+            {strings.BOOKING_PAGE.STEPPER_LABELS[2]}
+          </div>
       </div>
 
       <div className="step-content">
-        {currentStep === 1 && (
-            isLoading ? (
-              <div className="loading-message">Loading services...</div>
-            ) : error ? (
-              <div className="error-message">{error}</div>
-            ) : (
-              <ServiceStep 
-                services={services}
-                selectedService={selectedService}
-                onSelect={handleServiceSelect}
-              />
-            )
-        )}
+          {currentStep === 1 && (
+              isLoading ? (
+                <div className="loading-message">
+                  {strings.BOOKING_PAGE.LOADING_SERVICES}
+                </div>
+              ) : error ? (
+                <div className="error-message">{error}</div>
+              ) : (
+                <ServiceStep 
+                  services={services}
+                  selectedService={selectedService}
+                  onSelect={handleServiceSelect}
+                />
+              )
+          )}
 
         {currentStep === 2 && (
           <SpecialistStep 
@@ -154,6 +176,8 @@ const BookingPage = () => {
             setSelectedDate={setSelectedDate}
             selectedTime={selectedTime}
             setSelectedTime={setSelectedTime}
+            minDistanceInDays={minDistanceDaysBeetweenAppointments}
+            personalAppointments={personalAppointments}
           />
         )}
 
@@ -173,13 +197,14 @@ const BookingPage = () => {
   );
 };
 
-
 const ServiceStep = ({ services, selectedService, onSelect }) => (
   <div className="step-wrapper">
-    <h2>Select a Service</h2>
+    <h2>{strings.BOOKING_PAGE.SERVICE_STEP.TITLE}</h2>
     {services.length === 0 
     ? 
-      (<div className="empty-message">No services available</div>) 
+      (<div className="empty-message">
+        {strings.BOOKING_PAGE.SERVICE_STEP.NO_SERVICES}
+      </div>) 
     : 
       (<div className="card-grid">
         {services.map((service) => (
@@ -189,13 +214,14 @@ const ServiceStep = ({ services, selectedService, onSelect }) => (
             onClick={() => onSelect(service)}
           >
             <h3>{service.name}</h3>
-            <p>{service.duration}</p>
+            <p>
+              {strings.BOOKING_PAGE.SERVICE_STEP.DURATION_LABEL}: {service.duration}
+            </p>
           </div>
         ))}
         </div>
       )
     }
-    
   </div>
 );
 
@@ -205,9 +231,9 @@ const ofreceElServicio = (serviciosDelEspecialista, servicioElegido) => {
 
 const SpecialistStep = ({ specialists, selectedSpecialist, onSelect, onBack, selectedService }) => (
   <div className="step-wrapper">
-    <h2>Select a Specialist</h2>
+    <h2>{strings.BOOKING_PAGE.SPECIALIST_STEP.TITLE}</h2>
     <button className="back-button" onClick={onBack}>
-      ← Back to Services
+      {strings.BOOKING_PAGE.SPECIALIST_STEP.BACK_BUTTON}
     </button>
     <div className="card-grid">
       {specialists.map((specialist) => {
@@ -218,12 +244,15 @@ const SpecialistStep = ({ specialists, selectedSpecialist, onSelect, onBack, sel
               className={`card ${selectedSpecialist?.id === specialist.id ? 'selected' : ''}`}
               onClick={() => onSelect(specialist)}
             >
-              <h3>{specialist.first_name} {specialist.last_name}</h3>
+              <h3>
+                {strings.BOOKING_PAGE.SPECIALIST_STEP.NAME_FORMAT
+                  .replace('{firstName}', specialist.first_name)
+                  .replace('{lastName}', specialist.last_name)}
+              </h3>
             </div>
           )
         }
-      }
-      )}
+      })}
     </div>
   </div>
 );
@@ -234,17 +263,17 @@ const TimeStep = ({
   onBack,
   selectedDate,
   setSelectedDate,
-  selectedTime,
   setSelectedTime,
-  setCurrentStep
+  setCurrentStep,
+  personalAppointments,
+  minDistanceInDays
 }) => {
-  const [selectedSlot, setSelectedSlot] = useState(null)
   const [availability, setAvailability] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [localDate, setLocalDate] = useState(selectedDate || new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
-
+  const [canBook, setCanBook] = useState(false);
   // UTC ↔ Local helpers
   const toUTCString = dateLocal => moment(dateLocal).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
 
@@ -253,18 +282,26 @@ const TimeStep = ({
   }, [localDate, setSelectedDate]);
 
   useEffect(() => {
+    if(selectedEvent){
+      console.log(personalAppointments)
+      const isValid = canBookAppointment(personalAppointments, selectedEvent.start, minDistanceInDays);
+      setCanBook(isValid);
+    }
+  }, [selectedEvent]);
+
+  useEffect(() => {
     const fetchData = async () => {
       if (!employeeId || !serviceDuration) return;
       setIsLoading(true);
       try {
         const { start, end } = getWeekRange(localDate);
-        const token = localStorage.getItem('token');
-        const [availRes, appsRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/availability/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`, { headers: { Authorization: token, 'Content-Type': 'application/json' }}),
-          fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/appointment/employee?employeeId=${employeeId}&startDay=${start}&endDay=${end}`, { headers: { Authorization: token, 'Content-Type': 'application/json' }})
-        ]);
+
+        const availRes = await getAvailabilities(employeeId, start, end); 
+        const appsRes = await getAppointments(employeeId, start, end);
+
         const availData = await availRes.json();
         const appsData = await appsRes.json();
+        
         setAvailability(availData.result || []);
         setAppointments(appsData.result || []);
       } catch (error) {
@@ -276,48 +313,13 @@ const TimeStep = ({
     fetchData();
   }, [localDate, employeeId, serviceDuration]);
 
-  // Generate free slots in UTC
-  const generateNewAvailabilityUTC = (availability, appointments) => {
-    let newSlots = availability.map(slot => ({ ...slot }));
-
-    console.log(appointments);
-    if(appointments.length > 0){
-      appointments.forEach(appt => {
-        const temp = [];
-        const dateOnly = moment.utc(appt.date).format('YYYY-MM-DD');
-        const startA = moment.utc(`${dateOnly}T${appt.startTime}`);
-        const endA = moment.utc(`${dateOnly}T${appt.endTime}`);
-        
-        newSlots.forEach(slot => {
-          const slotDateOnly = moment.utc(slot.date).format('YYYY-MM-DD');
-          const startS = moment.utc(`${slotDateOnly}T${slot.start_time}`);
-          const endS = moment.utc(`${slotDateOnly}T${slot.end_time}`);
-          console.log(startS);
-
-          if (!startA.isSame(startS, 'day') || endA.isSameOrBefore(startS) || startA.isSameOrAfter(endS)) {
-            temp.push(slot);
-          } else {
-            const overlapStart = moment.max(startA, startS);
-            const overlapEnd = moment.min(endA, endS);
-            if (startS.isBefore(overlapStart)) temp.push({ date: slot.date, start_time: startS.format('HH:mm:ss'), end_time: overlapStart.format('HH:mm:ss') });
-            if (overlapEnd.isBefore(endS)) temp.push({ date: slot.date, start_time: overlapEnd.format('HH:mm:ss'), end_time: endS.format('HH:mm:ss') });
-          }
-
-        });
-        newSlots = temp;
-      });
-
-    }
-
-    return newSlots;
-  };
 
   // Generate time slots of serviceDuration in UTC
   const generateTimeSlotsUTC = () => {
     
     if (availability.length == 0 && !serviceDuration) return [];
 
-    const freeSlots = generateNewAvailabilityUTC(availability, appointments);
+    const freeSlots = calculateAvailableSlotsExcludingAppointments(availability, appointments);
     
     const slots = [];
 
@@ -355,10 +357,7 @@ const TimeStep = ({
       status: slot.status,
       resource: slot
     })) 
-    console.log(result);
-
     return result;
-
   };
 
   // Style events, highlight selected
@@ -390,18 +389,45 @@ const TimeStep = ({
     setCurrentStep(4)
   };
 
+      
+  function canBookAppointment(appointments, newDate, minDistanceDays) {
+      const targetDate = moment(newDate);
+      if(appointments.length > 0){
+        for (const appointment of appointments) {
+            const appointmentDate = moment(appointment.date);
+            const distance = Math.abs(appointmentDate.diff(targetDate, 'days'));
+
+            if (distance <= minDistanceDays) {
+                return false;
+            }
+
+            // Si el turno actual está después y la distancia es suficiente, 
+            // no es necesario revisar los siguientes (por estar ordenados)
+            if (appointmentDate.isAfter(targetDate) && distance > minDistanceDays) {
+                break;
+            }
+        }
+      }
+      return true;
+  }
+
   return (
     <div className="time-step-container">
-      <button className="back-button" onClick={onBack}>← Back to Specialist</button>
+      <button className="back-button" onClick={onBack}>
+        {strings.BOOKING_PAGE.TIME_STEP.BACK_BUTTON}
+      </button>
       <div className="calendar-container">
         {isLoading ? (
-          <div className="loading-message">Loading availability...</div>
+          <div className="loading-message">
+            {strings.BOOKING_PAGE.TIME_STEP.LOADING}
+          </div>
         ) : (
           <Calendar
+            culture='es'
             localizer={localizer}
             events={calendarEvents()}
             defaultView="week"
-            views={[ 'week' ]}
+            views={['week']}
             date={localDate}
             onNavigate={handleNavigate}
             style={{ height: 500 }}
@@ -410,85 +436,97 @@ const TimeStep = ({
             eventPropGetter={eventStyleGetter}
             selectable
             onSelectEvent={handleSelectEvent}
+            messages={{
+              next: strings.CALENDAR.NEXT,
+              previous: strings.CALENDAR.PREVIOUS,
+              today: strings.CALENDAR.TODAY,
+              month: strings.CALENDAR.MONTH,
+              week: strings.CALENDAR.WEEK,
+              day: strings.CALENDAR.DAY
+            }}
           />
         )}
       </div>
-      {selectedEvent && (
+      {selectedEvent && canBook ?  (
         <button className="confirm-button next-button mt-4" onClick={onSubmit}>
-          Confirm
+          {strings.BOOKING_PAGE.TIME_STEP.CONFIRM_BUTTON}
         </button>
+      ) : !selectedEvent ? (
+        <p  className="warning-message info">{strings.BOOKING_PAGE.TIME_STEP.VALIDATION_MESSAGES.NO_SLOT_SELECTED}</p>
+      ): (
+        <p  className="warning-message warning">{strings.BOOKING_PAGE.TIME_STEP.VALIDATION_MESSAGES.MIN_DISTANCE}</p>
       )}
     </div>
   );
 };
 
-
-
-  const getWeekRange = (date = new Date(), weekStartsOn = 1) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    
-    // Calculate start date
-    const diff = d.getDate() - day + (day === 0 ? -6 : weekStartsOn);
-    const start = new Date(d.setDate(diff));
-    start.setHours(0, 0, 0, 0);
+  const getWeekRange = (localDate) => {
+            const today = moment().startOf('day');
+            const weekStart = moment(localDate).startOf('isoWeek');
+            const start = weekStart.isBefore(today) ? today.format('YYYY-MM-DD') : weekStart.format('YYYY-MM-DD');
+            
+            const end   = moment(localDate).endOf('isoWeek').format('YYYY-MM-DD');
   
-    // Calculate end date
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+            return {start, end}
+      }
   
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0]
-    };
-  };
 
   const SummaryStep = ({ 
     selectedService, 
     selectedSpecialist, 
-    selectedDate, 
     selectedTime, 
     onBack, 
-    onConfirm 
+    onConfirm,
   }) => {
     const formattedDate = moment(selectedTime).format('LL');
     const formattedTime = moment(selectedTime).format('LT');
   
     return (
       <div className="step-wrapper">
-        <h2>Confirmación de Turno</h2>
+        <h2>{strings.BOOKING_PAGE.SUMMARY_STEP.TITLE}</h2>
         <button className="back-button" onClick={onBack}>
-          ← Volver a Horario
+          {strings.BOOKING_PAGE.SUMMARY_STEP.BACK_BUTTON}
         </button>
         
         <div className="summary-details">
           <div className="detail-item">
-            <span className="detail-label">Servicio:</span>
+            <span className="detail-label">
+              {strings.BOOKING_PAGE.SUMMARY_STEP.DETAIL_LABELS.SERVICE}
+            </span>
             <span className="detail-value">{selectedService.name}</span>
           </div>
           <div className="detail-item">
-            <span className="detail-label">Especialista:</span>
+            <span className="detail-label">
+              {strings.BOOKING_PAGE.SUMMARY_STEP.DETAIL_LABELS.SPECIALIST}
+            </span>
             <span className="detail-value">
               {selectedSpecialist.first_name} {selectedSpecialist.last_name}
             </span>
           </div>
           <div className="detail-item">
-            <span className="detail-label">Precio:</span>
-            <span className="detail-value">${selectedService.price}</span>
+            <span className="detail-label">
+              {strings.BOOKING_PAGE.SUMMARY_STEP.DETAIL_LABELS.PRICE}
+            </span>
+            <span className="detail-value">
+              {strings.BOOKING_PAGE.SUMMARY_STEP.CURRENCY}{selectedService.price}
+            </span>
           </div>
           <div className="detail-item">
-            <span className="detail-label">Fecha:</span>
+            <span className="detail-label">
+              {strings.BOOKING_PAGE.SUMMARY_STEP.DETAIL_LABELS.DATE}
+            </span>
             <span className="detail-value">{formattedDate}</span>
           </div>
           <div className="detail-item">
-            <span className="detail-label">Hora:</span>
+            <span className="detail-label">
+              {strings.BOOKING_PAGE.SUMMARY_STEP.DETAIL_LABELS.TIME}
+            </span>
             <span className="detail-value">{formattedTime}</span>
           </div>
-        </div>
-  
+        </div>        
+        
         <button className="confirm-button" onClick={onConfirm}>
-          Confirmar Turno
+          {strings.BOOKING_PAGE.SUMMARY_STEP.BUTTON_TEXT}
         </button>
       </div>
     );

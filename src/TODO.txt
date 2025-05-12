@@ -1,0 +1,4 @@
+1-Primero que ande todo, después lo de abajo, seguir probando VER
+2-La parte de booking tiene que poder hacerse del celular DONE
+2-Hacer archivo strings DE A POCO DONE
+3-La parte del empleado tiene que ser responsiva MAS ADELANTE 

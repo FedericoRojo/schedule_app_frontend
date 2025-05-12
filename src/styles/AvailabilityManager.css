@@ -1,0 +1,114 @@
+.error-message {
+    background-color: #ffebee; /* Fondo rojo claro */
+    color: #d32f2f; /* Texto rojo oscuro */
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #d32f2f;
+    margin: 16px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.error-close-btn {
+    background: none;
+    border: none;
+    color: #d32f2f;
+    cursor: pointer;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+/* Action Bar Container */
+.action-bar {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Base Button Styles */
+.action-bar button {
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Confirm Button */
+.action-bar button:first-child {
+  background: #28a745;
+  color: white;
+}
+
+.action-bar button:first-child:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.action-bar button:first-child:active {
+  transform: translateY(0);
+}
+
+/* Cancel Button */
+.action-bar button:nth-child(2) {
+  background: #6c757d;
+  color: white;
+}
+
+.action-bar button:nth-child(2):hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+/* Delete Button Specific */
+.action-bar button[onclick*="confirmDelete"] {
+  background: #dc3545;
+  color: white;
+}
+
+.action-bar button[onclick*="confirmDelete"]:hover {
+  background: #c82333;
+}
+
+/* Hover Effects */
+.action-bar button:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Focus States */
+.action-bar button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66,153,225,0.5);
+}
+
+/* Disabled State (si lo necesitas) */
+.action-bar button:disabled {
+  background: #e9ecef;
+  color: #adb5bd;
+  cursor: not-allowed;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .action-bar {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .action-bar button {
+    width: 100%;
+    justify-content: center;
+  }
+}

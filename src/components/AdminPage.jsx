@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import '../styles/AdminPage.css';
 import EmployeesSection from './AdminSections/EmployeesSection';
 import ServicesSection from './AdminSections/ServicesSection';
+import {strings} from './../locales/es.js'
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('services');
@@ -48,7 +49,7 @@ const AdminPage = () => {
   return (
     <div className="admin-container">
       <div className="admin-sidebar">
-        <h2>Panel Admin</h2>
+        <h2>{strings.ADMIN_PAGE.TITLE}</h2>
         
         {menuItems.map((item) => (
           <button

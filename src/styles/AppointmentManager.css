@@ -1,0 +1,55 @@
+
+/* Fondo semitransparente y posicionamiento */
+.edm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  /* Contenedor del modal */
+  .edm-container {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .edm-title {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+  }
+  
+  .edit-content, .edm-content p {
+    margin: 8px 0;
+  }
+  
+  /* Botones y acciones */
+  .edm-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  
+  .edm-close-button {
+    padding: 8px 16px;
+    background-color: #1e40af;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .edm-close-button:hover {
+    background-color: #1e3a8a;
+  }
+  
