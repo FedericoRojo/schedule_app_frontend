@@ -30,6 +30,7 @@ const BookingPage = () => {
   const [personalAppointments, setPersonalAppointments] = useState([]);
   const navigate = useNavigate();
   const minDistanceDaysBeetweenAppointments = 3;
+  const minDistanceInMinutesFromActualDateToTakeAnAppointment = 30;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -178,6 +179,7 @@ const BookingPage = () => {
             setSelectedTime={setSelectedTime}
             minDistanceInDays={minDistanceDaysBeetweenAppointments}
             personalAppointments={personalAppointments}
+            minDistanceInMinutesFromActualDateToTakeAnAppointment={minDistanceInMinutesFromActualDateToTakeAnAppointment}
           />
         )}
 
@@ -266,7 +268,8 @@ const TimeStep = ({
   setSelectedTime,
   setCurrentStep,
   personalAppointments,
-  minDistanceInDays
+  minDistanceInDays,
+  minDistanceInMinutesFromActualDateToTakeAnAppointment
 }) => {
   const [availability, setAvailability] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -274,7 +277,7 @@ const TimeStep = ({
   const [localDate, setLocalDate] = useState(selectedDate || new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [canBook, setCanBook] = useState(false);
-  // UTC ↔ Local helpers
+
   const toUTCString = dateLocal => moment(dateLocal).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
 
   useEffect(() => {
@@ -283,7 +286,6 @@ const TimeStep = ({
 
   useEffect(() => {
     if(selectedEvent){
-      console.log(personalAppointments)
       const isValid = canBookAppointment(personalAppointments, selectedEvent.start, minDistanceInDays);
       setCanBook(isValid);
     }
@@ -313,8 +315,8 @@ const TimeStep = ({
     fetchData();
   }, [localDate, employeeId, serviceDuration]);
 
+  
 
-  // Generate time slots of serviceDuration in UTC
   const generateTimeSlotsUTC = () => {
     
     if (availability.length == 0 && !serviceDuration) return [];
@@ -328,18 +330,23 @@ const TimeStep = ({
       let current = moment.utc(`${datePart}T${slot.start_time}`); 
       const end     = moment.utc(`${datePart}T${slot.end_time}`);
 
+      const actualDate = moment().utc();
+
       while (current.isBefore(end)) {
         const endSlot = moment.utc(current).add(serviceDuration, 'minutes');
         if (endSlot.isSameOrBefore(end)) {
-          slots.push({
-            id: current.valueOf(),
-            start: current.toDate(),
-            end: endSlot.toDate(),
-            status: 'available',
-            title: 'Available'
-          });
+          if(endSlot.isAfter(actualDate.clone().add(minDistanceInMinutesFromActualDateToTakeAnAppointment, 'minutes'))){
+            slots.push({
+              id: current.valueOf(),
+              start: current.toDate(),
+              end: endSlot.toDate(),
+              status: 'available',
+              title: 'Available'
+            });
+          }
           current = endSlot;
         } else break;
+        
       }
 
     });
@@ -347,7 +354,7 @@ const TimeStep = ({
     return slots;
   };
 
-  // Calendar events with local times
+
   const calendarEvents = () => {
     let result = generateTimeSlotsUTC().map(slot => ({
       id: slot.id,
@@ -360,7 +367,6 @@ const TimeStep = ({
     return result;
   };
 
-  // Style events, highlight selected
   const eventStyleGetter = event => {
     const isSelected = event?.id === selectedEvent?.id;
     return {
