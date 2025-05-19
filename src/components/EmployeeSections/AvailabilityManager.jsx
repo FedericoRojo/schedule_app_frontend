@@ -5,9 +5,10 @@ import {useState, useEffect, useCallback, useMemo } from 'react';
 import moment from 'moment';
 import ModeSelector from './ModeSelector';
 import 'moment/locale/es'; 
-import {  getAvailabilities} from '../../services/availability.js'
+import {  getAvailabilities, newAvailabilities, updateAvailability, deleteAvailability } from '../../services/availability.js'
 import '../../styles/AvailabilityManager.css';
 import {strings} from '../../locales/es.js'
+import {calendarHourEnd, calendarHourStart} from './../../utils/calendar_config.js'
 
 
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -62,6 +63,7 @@ const AvailabilityManager = ({
           const availResponse = await getAvailabilities(employeeId, start, end)
          
           const availabilityData = await availResponse.json();
+          console.log(availabilityData.result);
           setAvailability(availabilityData.result);
 
       } catch (error) {
@@ -77,22 +79,18 @@ const AvailabilityManager = ({
     
     
     function toCalendarEvent(slot){
-        const base = moment.utc(slot.date);
-        const [h1, m1] = slot.start_time.split(':').map(Number);
-        const [h2, m2] = slot.end_time.split(':').map(Number);
-    
         return {
             id: slot.id,
-            title: slot.title || 'Disponible',
-            start: base.clone().set({hour: h1, minute:m1}).local().toDate(),
-            end: base.clone().set({hour:h2, minute:m2}).local().toDate(),
+            title: slot.title || strings.EMPLOYEE_SCHEDULE.AVAILABILITY_MANAGER.AVAILABLE,
+            start: moment.utc(slot.start_time).local().toDate(),
+            end: moment.utc(slot.end_time).local().toDate(),
             isAvailability: true
         }
     }
     
     function buildEvents(){
         let events = availability.map(toCalendarEvent);
-        
+
         if(editTarget){
             events = events.map( event => {
                 if(event.id === editTarget.original.id){
@@ -138,7 +136,6 @@ const AvailabilityManager = ({
                 }
             })
         }
-    
         return events
     }
 
@@ -152,14 +149,14 @@ const AvailabilityManager = ({
     
     const isCompletlyWithinAvailability = useCallback((start, end) => {
         return availability.some(slot => {
-        const slotStart = moment(`${slot.date} ${slot.start_time}`);
-        const slotEnd = moment(`${slot.date} ${slot.end_time}`);
-        
-        return (
-            moment(start).isSame(slotStart, 'day') && 
-            moment(start).isSameOrAfter(slotStart) &&
-            moment(end).isSameOrBefore(slotEnd)
-        );
+          const slotStart = moment(`$${slot.start_time}`);
+          const slotEnd = moment(`$${slot.end_time}`);
+          
+          return (
+              moment(start).isSame(slotStart, 'day') && 
+              moment(start).isSameOrAfter(slotStart) &&
+              moment(end).isSameOrBefore(slotEnd)
+          );
         });
     }, [availability]);
     
@@ -185,15 +182,13 @@ const AvailabilityManager = ({
     
     function handleEventResize({event, start, end}){
         if(currentMode == mode.EDIT || event.isAvailability){
-            setEditTarget({original: event, modified: {start, end}})
+            if(start < end){
+              setEditTarget({original: event, modified: {start, end}})
+            }
         }
     }
 
-    function handleEventDrop({ event, start, end }) {
-        if (mode !== mode.EDIT || !event.isAvailability) return;
-        setEditTarget({ original: event, modified: { start, end } });
-      }
-      
+     
     
     function handleSelectEvent(event){
         if(currentMode == mode.DELETE && event.isAvailability){
@@ -201,58 +196,54 @@ const AvailabilityManager = ({
         }
     }
 
-      const createLimits = (start, end) => {
+    const createLimits = (start, end) => {
         const utcStart = moment(start).utc();
         const utcEnd   = moment(end).utc();
-    
+
         const newBlock = {
           start: utcStart.clone().startOf('minute'),
           end:   utcEnd.clone().startOf('minute')
         };
         const fragments = [ newBlock ];
-    
-        availability.forEach(oldSlot => {
-          const oldUtcDate = moment.utc(oldSlot.date);
-          const [h1, m1] = oldSlot.start_time.split(':').map(Number);
-          const [h2, m2] = oldSlot.end_time.split(':').map(Number);
-    
-          const oldSlotStart = oldUtcDate.clone().set({ hour: h1, minute: m1 });
-          const oldSlotEnd   = oldUtcDate.clone().set({ hour: h2, minute: m2 });
-    
-          let i = 0;
-          while (i < fragments.length) {
-            const frag = fragments[i];
-            const fStart = frag.start;
-            const fEnd   = frag.end;
-    
-            if (fStart.isSame(oldUtcDate, 'day') &&
-                fStart.isBefore(oldSlotEnd) &&
-                fEnd.isAfter(oldSlotStart)) {
-    
-              const newFrags = [];
-              // izquierda
-              if (fStart.isBefore(oldSlotStart)) {
-                newFrags.push({ start: fStart, end: oldSlotStart.clone() });
-              }
-              // derecha
-              if (fEnd.isAfter(oldSlotEnd)) {
-                newFrags.push({ start: oldSlotEnd.clone(), end: fEnd });
-              }
-              fragments.splice(i, 1, ...newFrags);
-              i += newFrags.length;
-              continue;
-            }
-            i++;
-          }
-        });
         
-        return fragments
-          .filter(f => f.end.diff(f.start, 'minutes') > 0)
-          .map(f => ({
-            start: f.start.local().toDate(),
-            end:   f.end.local().toDate()
-          }));
-      };
+        availability.forEach(oldSlot => {
+
+            const oldSlotStart = moment.utc(oldSlot.start_time);
+            const oldSlotEnd   = moment.utc(oldSlot.end_time)
+
+            let i = 0;
+            while (i < fragments.length) {
+              const frag = fragments[i];
+              const fStart = frag.start;
+              const fEnd   = frag.end;
+      
+              if (fStart.isSame(oldSlotStart, 'day') && fStart.isBefore(oldSlotEnd) && fEnd.isAfter(oldSlotStart)) {
+                const newFrags = [];
+
+                // izquierda
+                if (fStart.isBefore(oldSlotStart)) {
+                  newFrags.push({ start: fStart, end: oldSlotStart.clone() });
+                }
+                // derecha
+                if (fEnd.isAfter(oldSlotEnd)) {
+                  newFrags.push({ start: oldSlotEnd.clone(), end: fEnd });
+                }
+                fragments.splice(i, 1, ...newFrags);
+
+                i += newFrags.length;
+                continue;
+              }
+              i++;
+            }
+      });
+        
+      return fragments
+        .filter(f => f.end.diff(f.start, 'minutes') > 0)
+        .map(f => ({
+          start: f.start.local().toDate(),
+          end:   f.end.local().toDate()
+        }));
+    };
 
 
     async function confirmAdd() {
@@ -266,30 +257,22 @@ const AvailabilityManager = ({
             const formattedSlots = slotsToInsert.map(slot => {
                 formattedSlotsToPrint.push({
                     date:  slot.start.toISOString(), 
-                    start_time: moment.utc(slot.start).format('HH:mm:ss'),
-                    end_time: moment.utc(slot.end).  format('HH:mm:ss'),
+                    start_time: moment.utc(slot.start).toISOString(),
+                    end_time:  moment.utc(slot.end).toISOString(),
                     employee_id: employeeId
                 })
                 
                 return {
                   date:  slot.start.toISOString(), 
-                  start_time: moment.utc(slot.start).format('HH:mm:ss'),
-                  end_time: moment.utc(slot.end).  format('HH:mm:ss'),
+                  start_time: moment.utc(slot.start).toISOString(),
+                  end_time: moment.utc(slot.end).toISOString(),
                   employee_id: employeeId
                 }
             });
     
             
-        
-            const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/availability/new`, {
-              method: 'POST',
-              headers: {
-                  'Authorization': token,
-                  'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ slots: formattedSlots })
-            });
-        
+            const response = await newAvailabilities(formattedSlots);
+            
             if (!response.ok) throw new Error('Error en el servidor');
     
             const newAvailability = [...availability, ...formattedSlotsToPrint];
@@ -304,31 +287,20 @@ const AvailabilityManager = ({
 
   async function confirmEdit() {
     try{
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/availability/update/${editTarget.original.id}`, {
-          method: "PUT",
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            employee_id: employeeId,
-            date: editTarget.original.start,
-            start_time: moment.utc(editTarget.modified.start).format('HH:mm:ss'),
-            end_time: moment.utc(editTarget.modified.end).format('HH:mm:ss')
-          })
-        });
+        const date = moment(editTarget.original.start).utc().toISOString()
+        const start = moment(editTarget.modified.start).utc().toISOString()
+        const end = moment(editTarget.modified.end).utc().toISOString()
 
+        const response = await updateAvailability( editTarget.original.id, employeeId, date, start, end );
         
-
         if(response.ok){
             setAvailability(prev =>
                 prev.map(s =>
                   s.id === editTarget.original.id
                     ? { ...s,
-                        date:       editTarget.modified.start.toISOString(),
-                        start_time: moment.utc(editTarget.modified.start).format('HH:mm:ss'),
-                        end_time:   moment.utc(editTarget.modified.end)  .format('HH:mm:ss'),
+                        date:       date,
+                        start_time: start,
+                        end_time:   end,
                       }
                     : s
                 )
@@ -347,14 +319,8 @@ const AvailabilityManager = ({
 
   async function confirmDelete() {
     try{
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/availability/${deleteTarget.id}`,{
-        method: 'DELETE',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      })
+      const response = await deleteAvailability(deleteTarget.id);
+      
       if(response.ok){
         setAvailability(prev =>
           prev.filter(s => s.id !== deleteTarget.id)
@@ -428,14 +394,13 @@ const AvailabilityManager = ({
         defaultView='week'
         views={['week']}
         onNavigate={handleNavigate}
-        min={new Date(0, 0, 0, 8, 0, 0)}
-        max={new Date(0, 0, 0, 21, 0, 0)}
+        min={new Date(0, 0, 0, calendarHourStart, 0, 0)}
+        max={new Date(0, 0, 0, calendarHourEnd, 0, 0)}
         eventPropGetter={eventStyleGetter}
         selectable={true}
         onSelectSlot={handleADDSelectSlot}
         onSelectEvent={handleSelectEvent}
         onEventResize={handleEventResize}
-        onEventDrop={handleEventDrop}
         draggableAccessor={event => currentMode === mode.EDIT && event.isAvailability}
         resizableAccessor={event => currentMode === mode.EDIT && event.isAvailability}
         messages={{

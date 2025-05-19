@@ -5,8 +5,11 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import {calculateAvailableSlotsExcludingAppointments} from '../utils/format.js';
 import {getAvailabilities} from '../services/availability.js';
-import {getAppointments, getUserAppointments} from '../services/appointment.js';
+import {getAppointments, getUserAppointments, createAppointment} from '../services/appointment.js';
+import {getServices} from './../services/service.js';
+import {getEmployees} from './../services/user.js'
 import {strings} from '../locales/es.js';
+import {calendarHourEnd, calendarHourStart} from './../utils/calendar_config.js'
 import moment from 'moment';
 import 'moment/locale/es';
 
@@ -35,29 +38,14 @@ const BookingPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
 
         const apptResponse = await getUserAppointments();
         const apptData = await apptResponse.json();
 
-        const servicesResponse = await fetch(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/services`,
-          {headers: {
-            'Authorization': token,
-            'Content-Type': "application-json"
-          }}
-        );
+        const servicesResponse = await getServices();
         const servicesData = await servicesResponse.json();
         
-        const specialistsResponse = await fetch(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/users/employees`,
-          {
-            headers: {
-              'Authorization': token,
-              "Content-Type": "application-json"
-            }
-          }
-        );
+        const specialistsResponse = await getEmployees();
         const specialistsData = await specialistsResponse.json();
 
         setServices(servicesData.result);
@@ -90,33 +78,16 @@ const BookingPage = () => {
   };
 
   const handleAppointmentConfirmation = async () => {
-    const token = localStorage.getItem('token');
     const specialistID = selectedSpecialist.id;   
-
-    const timeUTC = moment(selectedTime).utc();
-    const dateUTC      = timeUTC.format('YYYY-MM-DD');
-    const startTimeUTC = timeUTC.format('HH:mm');
-    const endTimeUTC = timeUTC.clone().add(selectedService.duration, 'minutes').format('HH:mm');
-
-    const appointmentConfirmationResponse = await fetch(`
-      ${import.meta.env.VITE_APP_API_BASE_URL}/appointment/new`,
-      { method: 'POST',
-        headers: 
-        {
-        'Authorization': token,
-        'Content-Type': "application/json"
-        }
-      , body: JSON.stringify({
-          employee_id: specialistID, 
-          service_id: selectedService.id, 
-          date: timeUTC.format('YYYY-MM-DD'), 
-          start_time: startTimeUTC,
-          end_time: endTimeUTC
-        })
-      });
-
     
-    const appointmentConfirmationData = await appointmentConfirmationResponse.json();
+    const startAppt = moment(selectedTime).utc().toISOString();
+    const endAppt = moment.utc(startAppt).add(selectedService.duration, 'minutes');
+    try{
+      const response =  await createAppointment(specialistID, selectedService.id, startAppt, startAppt, endAppt);
+    }catch(e){
+      console.error(e);
+      setError(e);
+    }
     navigate('/');
   }
 
@@ -286,7 +257,8 @@ const TimeStep = ({
 
   useEffect(() => {
     if(selectedEvent){
-      const isValid = canBookAppointment(personalAppointments, selectedEvent.start, minDistanceInDays);
+      //const isValid = canBookAppointment(personalAppointments, selectedEvent.start, minDistanceInDays);
+      const isValid = true;
       setCanBook(isValid);
     }
   }, [selectedEvent]);
@@ -326,9 +298,8 @@ const TimeStep = ({
     const slots = [];
 
     freeSlots.forEach(slot => {
-      const datePart = moment.utc(slot.date).format('YYYY-MM-DD'); 
-      let current = moment.utc(`${datePart}T${slot.start_time}`); 
-      const end     = moment.utc(`${datePart}T${slot.end_time}`);
+      let current = moment.utc(slot.start_time); 
+      const end     = moment.utc(slot.end_time);
 
       const actualDate = moment().utc();
 
@@ -338,10 +309,10 @@ const TimeStep = ({
           if(endSlot.isAfter(actualDate.clone().add(minDistanceInMinutesFromActualDateToTakeAnAppointment, 'minutes'))){
             slots.push({
               id: current.valueOf(),
-              start: current.toDate(),
-              end: endSlot.toDate(),
-              status: 'available',
-              title: 'Available'
+              start: current,
+              end: endSlot,
+              status: strings.BOOKING_PAGE.TIME_STEP.SLOTS.STATUS_AVAIL,
+              title: strings.BOOKING_PAGE.TIME_STEP.SLOTS.TITLE_AVAIL
             });
           }
           current = endSlot;
@@ -359,8 +330,8 @@ const TimeStep = ({
     let result = generateTimeSlotsUTC().map(slot => ({
       id: slot.id,
       title: slot.title,
-      start: moment.utc(slot.start).local().toDate(),
-      end: moment.utc(slot.end).local().toDate(),
+      start: slot.start.local().toDate(),
+      end: slot.end.local().toDate(),
       status: slot.status,
       resource: slot
     })) 
@@ -379,7 +350,6 @@ const TimeStep = ({
     };
   };
 
-  // Select event
   const handleSelectEvent = event => {
     if (event) {
       setSelectedEvent(event);
@@ -437,8 +407,8 @@ const TimeStep = ({
             date={localDate}
             onNavigate={handleNavigate}
             style={{ height: 500 }}
-            min={new Date(0,0,0,8,0)}
-            max={new Date(0,0,0,20,0)}
+            min={new Date(0,0,0,calendarHourStart,0)}
+            max={new Date(0,0,0,calendarHourEnd,0)}
             eventPropGetter={eventStyleGetter}
             selectable
             onSelectEvent={handleSelectEvent}

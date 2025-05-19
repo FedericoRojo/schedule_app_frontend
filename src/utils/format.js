@@ -9,14 +9,12 @@ const calculateAvailableSlotsExcludingAppointments = (availability, appointments
 
       appointments.forEach(appt => {
         const temp = [];
-        const dateOnly = moment.utc(appt.date).format('YYYY-MM-DD');
-        const startA = moment.utc(`${dateOnly}T${appt.startTime}`);
-        const endA = moment.utc(`${dateOnly}T${appt.endTime}`);
-        
+        const startA = moment.utc(appt.startTime);
+        const endA = moment.utc(appt.endTime);
+
         newSlots.forEach(slot => {
-          const slotDateOnly = moment.utc(slot.date).format('YYYY-MM-DD');
-          const startS = moment.utc(`${slotDateOnly}T${slot.start_time}`);
-          const endS = moment.utc(`${slotDateOnly}T${slot.end_time}`);
+          const startS = moment.utc(slot.start_time);
+          const endS = moment.utc(slot.end_time);
 
           if (!startA.isSame(startS, 'day') || endA.isSameOrBefore(startS) || startA.isSameOrAfter(endS)) {
             temp.push(slot);
@@ -28,14 +26,14 @@ const calculateAvailableSlotsExcludingAppointments = (availability, appointments
               temp.push({ 
                     id: `${slot.id}-pre-${startS.valueOf()}`,
                     date: slot.date, 
-                    start_time: startS.format('HH:mm:ss'),
-                    end_time: overlapStart.format('HH:mm:ss') });
+                    start_time: startS,
+                    end_time: overlapStart });
             if (overlapEnd.isBefore(endS))
                temp.push({ 
                     id: `${slot.id}-post-${overlapEnd.valueOf()}`,
                     date: slot.date, 
-                    start_time: overlapEnd.format('HH:mm:ss'), 
-                    end_time: endS.format('HH:mm:ss') });
+                    start_time: overlapEnd, 
+                    end_time: endS });
           
           }
 

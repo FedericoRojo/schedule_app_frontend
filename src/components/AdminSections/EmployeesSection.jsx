@@ -1,5 +1,6 @@
 import React, {useEffect, useState, useCallback} from 'react';
 import {strings} from './../../locales/es.js';
+import {updateUserRole, updateEmployee, getEmployees, searchUser, deleteUser} from '../../services/user.js'
 
 
 export default function EmployeesSection({ allServices, setAllServices }) {
@@ -26,15 +27,14 @@ export default function EmployeesSection({ allServices, setAllServices }) {
 
     const fetchEmployees = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/users/employees`,{
-          headers: {
-            'Authorization': token
-          }
-        });
-        if (!response.ok) throw new Error('Error obteniendo empleados');
-        const data = await response.json();
-        setEmployees(data.result.map(emp => ({ ...emp, editing: false })));
+        const response = await getEmployees();
+        
+        if (!response.ok){
+          throw new Error('Error obteniendo empleados');
+        }else{
+          const data = await response.json();
+          setEmployees(data.result.map(emp => ({ ...emp, editing: false })));
+        }
       } catch (error) {
         console.error('Error:', error);
       }
@@ -42,19 +42,14 @@ export default function EmployeesSection({ allServices, setAllServices }) {
 
     const handleSearchUsers = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/users/search?firstName=${searchFirstName}&lastName=${searchLastName}`,
-          {
-            headers: {
-              'Authorization': token
-            }
-          }
-        );
+        const response = await searchUser(searchFirstName, searchLastName);
         
-        if (!response.ok) throw new Error('Error en la búsqueda');
-        const data = await response.json();
-        setSearchResults(data.result);
+        if (!response.ok){
+          throw new Error('Error en la búsqueda');
+        }else {
+          const data = await response.json();
+          setSearchResults(data.result);
+        }
       } catch (error) {
         console.error('Error:', error);
         setSearchResults([]);
@@ -66,18 +61,14 @@ export default function EmployeesSection({ allServices, setAllServices }) {
       if (!deletingEmployeeId) return;
 
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/users/${deletingEmployeeId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization' : token
-          }
-        });
-
-        if (!response.ok) throw new Error('Error eliminando empleado');
-        
-        await fetchEmployees();
-        setDeletingEmployeeId(null);
+        const response = await deleteUser(deletingEmployeeId);
+    
+        if (!response.ok){ 
+          throw new Error('Error eliminando empleado');
+        }else{
+          await fetchEmployees();
+          setDeletingEmployeeId(null);
+        }
       } catch (error) {
         console.error('Error:', error);
         setDeletingEmployeeId(null);
@@ -114,28 +105,13 @@ export default function EmployeesSection({ allServices, setAllServices }) {
     
     const handleUpdateSave = useCallback(async (updatedEmployee) => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/users/update/${updatedEmployee.id}`, 
-          {
-            method: 'PUT',
-            headers: { 
-              'Authorization': token,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              firstName: updatedEmployee.first_name,
-              lastName: updatedEmployee.last_name,
-              role: updatedEmployee.role,
-              services: updatedEmployee.services.map(s => s.service_id) 
-            })
-          }
-        );
+        const response = await updateEmployee(updatedEmployee);
         
-        if (!response.ok) throw new Error('Error actualizando empleado');
-        
-        await fetchEmployees();
-
+        if (!response.ok){ 
+          throw new Error('Error actualizando empleado')
+        }else{
+          await fetchEmployees();
+        }
       } catch (error) {
         console.error('Error:', error);
       }
@@ -143,25 +119,13 @@ export default function EmployeesSection({ allServices, setAllServices }) {
 
     const updateRole = async (updatedEmployee) => {
         try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/users/upgrade/${updatedEmployee.id}`, 
-          {
-            method: 'PUT',
-            headers: { 
-              'Authorization': token,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              role: updatedEmployee.role
-            })
-          }
-        );
-        
-        if (!response.ok) throw new Error('Error actualizando empleado');
-        
-        await fetchEmployees();
+        const response = await updateUserRole(updatedEmployee)
 
+        if (!response.ok){  
+          throw new Error('Error actualizando empleado');
+        }else{
+          await fetchEmployees();
+        }
       } catch (error) {
         console.error('Error:', error);
       }

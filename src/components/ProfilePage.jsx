@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from './AuthContext';
 import '../styles/ProfilePage.css';
 import {strings} from '../locales/es.js';
+import {authUser, updateUserProfile} from './../services/user.js';
 
 function ProfilePage() {
   const { user } = useContext(AuthContext);
@@ -18,71 +19,36 @@ function ProfilePage() {
 
   const  fetchUser = async() => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/users/auth`, {
-        method: 'GET',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': token
-        }
-      });
+      const response = await authUser();
+     
       if (response.ok) {
         const data = await response.json();
-        console.log(data.result);
         setFirstName(data.result.first_name || '');
         setLastName(data.result.last_name || '');
         setPhone(data.result.phone || '');
         setEmail(data.result.email || '');
       } else {
         const errorData = await response.json();
-        throw new Error('Register failed, ', errorData.errors);
+        throw new Error('Error while authenticating user, ', errorData.errors);
       }
     } catch (error) {
       throw error;
     }
   }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     try {
-      await updateProfile( firstName, lastName, phone, email );
+        await updateUserProfile( user.id, firstName, lastName, phone, email );
         setFirstName(firstName);
         setLastName(lastName);
         setPhone(phone);
         setEmail(email);
-      setSuccess('Perfil actualizado correctamente.');
+        setSuccess('Perfil actualizado correctamente.');
     } catch (err) {
-      setError('Error al actualizar el perfil.');
-    }
-  };
-
-  
-
-  const updateProfile = async ( firstName, lastName, phone, email) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/users/update/profile/${user.id}`, {
-        method: 'PUT',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': token
-        },
-        body: JSON.stringify({ 
-          email, 
-          firstName,
-          lastName,
-          phoneNumber: phone
-        }),
-      });
-      if (response.ok) {
-        
-      } else {
-        const errorData = await response.json();
-        throw new Error('Register failed, ', errorData.errors);
-      }
-    } catch (error) {
-      throw error;
+        setError('Error al actualizar el perfil.');
     }
   };
 

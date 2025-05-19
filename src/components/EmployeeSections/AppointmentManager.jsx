@@ -6,6 +6,8 @@ import 'moment/locale/es';
 import {calculateAvailableSlotsExcludingAppointments} from '../../utils/format.js';
 import {getAppointments} from '../../services/appointment.js';
 import {getAvailabilities} from '../../services/availability.js'
+
+import {calendarHourEnd, calendarHourStart} from './../../utils/calendar_config.js'
 import '../../styles/AppointmentManager.css';
 import {strings} from '../../locales/es.js'
 
@@ -42,7 +44,7 @@ const AppointmentManager = ({
             const end   = moment(localDate).endOf('isoWeek').format('YYYY-MM-DD');
   
             return {start, end}
-      }
+  }
 
   const fetchData = async () => {
     try {
@@ -53,7 +55,8 @@ const AppointmentManager = ({
         
         const availabilityData = await availabilityResponse.json();
         const appointmentData = await appointmetsResponse.json();
-        console.log(appointmentData.result);
+
+        
         setAvailability(availabilityData.result);
         setAppointments(appointmentData.result);
     } catch (error) {
@@ -69,15 +72,14 @@ const AppointmentManager = ({
 
     if (newAvailability != null && newAvailability.length != 0) {
       newAvailability.forEach(slot => {
-          const datePart = moment.utc(slot.date).format('YYYY-MM-DD'); 
-          const start = moment.utc(`${datePart}T${slot.start_time}`).local().toDate();
-          const end = moment.utc(`${datePart}T${slot.end_time}`).local().toDate();
+          const start = moment.utc(slot.start_time).local().toDate();
+          const end = moment.utc(slot.end_time).local().toDate();
           result.push({
             id: `avail-${slot.id}`,
             start: start,
             end: end,
-            title: 'Available',
-            status: 'availability',
+            title: strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.SLOTS.TITLE_AVAIL,
+            status: strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.SLOTS.STATUS_AVAIL,
             resource: slot
           });
       });
@@ -85,9 +87,8 @@ const AppointmentManager = ({
   
     if (appointments != null && appointments.length != 0) {
       appointments.forEach(appt => {
-        const datePart = moment.utc(appt.date).format('YYYY-MM-DD'); 
-        const start = moment.utc(`${datePart}T${appt.startTime}`).local().toDate();
-        const end = moment.utc(`${datePart}T${appt.endTime}`).local().toDate();
+        const start = moment.utc(appt.startTime).local().toDate();
+        const end = moment.utc(appt.endTime).local().toDate();
         
         result.push({
           id: `appt-${appt.id}`,
@@ -152,8 +153,8 @@ const AppointmentManager = ({
         views={['day', 'week', 'month']}
         step={15}
         timeslots={2}
-        min={new Date(0,0,0,8,0)}
-        max={new Date(0,0,0,20,0)}
+        min={new Date(0,0,0,calendarHourStart,0)}
+        max={new Date(0,0,0,calendarHourEnd,0)}
         style={{ height: '80vh' }}
         eventPropGetter={eventStyleGetter}
         onSelectEvent={onSelectEvent}

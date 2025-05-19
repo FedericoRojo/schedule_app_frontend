@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {strings} from './../../locales/es.js'
+import {updateService, deleteService, addService} from '../../services/service.js'
 
 export default function ServicesSection ({services, setServices, fetchServices}) {
     const [newService, setNewService] = useState({ name: '', price: '', duration: '' });
@@ -25,21 +26,7 @@ export default function ServicesSection ({services, setServices, fetchServices})
 
     const fetchUpdateService = async(id) => {
       try{
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/services/update/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: newService.name,
-            description: '',
-            price: newService.price,
-            duration: newService.duration
-          })
-        })
-        const data = await response.json();
+        await updateService(id, newService);
         setReload(prev => !prev);
       }catch(e){
         console.log(e);
@@ -74,15 +61,7 @@ export default function ServicesSection ({services, setServices, fetchServices})
 
     const fetchDeleteService = async () => {
       try{
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/services/${deletingServiceId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          }
-        })
-        const data = await response.json();
+        await deleteService(deletingServiceId);
         setReload(prev => !prev);
       }catch(e){
         console.log(e);
@@ -114,20 +93,7 @@ export default function ServicesSection ({services, setServices, fetchServices})
 
     const handleFetchAddService = async ( ) => {
       try{
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/services/new`, {
-          method: 'POST',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: newService.name,
-            description: '',
-            price: newService.price,
-            duration: newService.duration
-          })
-        })
+        const response = await addService(newService)
         const data = await response.json();
         setReload(prev => !prev);
       }catch(e){

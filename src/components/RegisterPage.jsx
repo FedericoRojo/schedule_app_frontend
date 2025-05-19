@@ -3,6 +3,7 @@ import '../styles/RegisterPage.css';
 import {strings} from '../locales/es.js';
 import { ValidationError } from '../utils/error.js';
 import { useNavigate } from 'react-router-dom';
+import {registerUser} from './../services/user.js'
 
 function RegisterPage() {
   const [name, setName] = useState('');
@@ -17,38 +18,23 @@ function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await register(email, password, name, lastName, phoneNumber);
+        await register(email, password, name, lastName, phoneNumber);
     } catch (err) {
-      if (err instanceof ValidationError) {
-        setError(err.errors)
-      }else{
-        setError([{msg: 'Invalid input'}]);
-      }
+        if (err instanceof ValidationError) {
+            setError(err.errors);
+        } else {
+            setError([{msg: 'Error inesperado'}]);
+        }
     }
   };
 
    const register = async (emailInput, passwordInput, nameInput, lastNameInput, phoneNumberInput) => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/users/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email: emailInput, 
-            password: passwordInput,
-            firstName: nameInput,
-            lastName: lastNameInput,
-            phoneNumber: phoneNumberInput 
-          }),
-        });
-        if (response.ok) {
-          navigate('/login'); 
-        } else {
-          const errorData = await response.json();
-          throw new ValidationError('Register failed',  errorData.errors);
-        }
-      } catch (error) {
-        throw error;
-      }
+    try {
+        await registerUser(emailInput, passwordInput, nameInput, lastNameInput, phoneNumberInput);
+        navigate('/login');
+    } catch (error) {
+        throw error; 
+    }
     };
 
   return (

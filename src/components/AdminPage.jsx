@@ -3,6 +3,7 @@ import '../styles/AdminPage.css';
 import EmployeesSection from './AdminSections/EmployeesSection';
 import ServicesSection from './AdminSections/ServicesSection';
 import {strings} from './../locales/es.js'
+import {getServices} from './../services/service.js';
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('services');
@@ -19,12 +20,7 @@ const AdminPage = () => {
 
   const fetchServices = async () => {
     try{
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/services`,{
-        headers: {
-          'Authorization': token
-        }
-      });
+      const response = await getServices();
       const data = await response.json();
       const newData = data.result.map(elem => ({...elem, editing: false})); 
       setServices(newData);

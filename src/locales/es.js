@@ -64,6 +64,10 @@ export const strings = {
             VALIDATION_MESSAGES: {
                 NO_SLOT_SELECTED: "Debes seleccionar un turno",
                 MIN_DISTANCE: "No puedes agendar citas tan seguidas"
+            },
+            SLOTS: {
+                STATUS_AVAIL: 'available',
+                TITLE_AVAIL: 'Available'
             }
         },
          SUMMARY_STEP: {
@@ -79,6 +83,7 @@ export const strings = {
             },
             CURRENCY: "$" 
         },
+
     },
     CALENDAR: {
         AGENDA: "Agenda",
@@ -220,6 +225,10 @@ export const strings = {
                 UNITS: {
                     DURATION: "min"
                 }
+            },
+            SLOTS: {
+                TITLE_AVAIL: 'Available',
+                STATUS_AVAIL: "availability"
             }
         },
         AVAILABILITY_MANAGER: {
@@ -235,6 +244,9 @@ export const strings = {
             },
             ERROR: {
                 CLOSE_ARIA: "Cerrar mensaje de error"
+            },
+            LABELS: {
+                AVAILABLE: "Disponible"
             }
         },
         MODE_SELECTOR: {

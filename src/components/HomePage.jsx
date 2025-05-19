@@ -3,6 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import moment from 'moment';
 import '../styles/HomePage.css';
 import {strings} from '../locales/es.js'
+import {getUserAppointments, cancelAppointment} from './../services/appointment.js';
 
 function HomePage({}){
 
@@ -24,16 +25,8 @@ function HomePage({}){
   
 
   const fetchAppointments = async() => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/appointment`, {
-      method: 'GET',
-      headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json'
-      }
-    })
+    const response = await getUserAppointments();
     const data = await response.json();
-    
     setAppointments(data.result);
   }
 
@@ -42,16 +35,8 @@ function HomePage({}){
   };
 
   const fetchCancelAppointment = async (id) => {
-    const token = localStorage.getItem('token');
     try{
-      const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/appointment/cancel/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token
-        }
-      })
-      const data = await response.json();
-
+      const response = await cancelAppointment(id);
       setReload(prev => !prev);
     }catch(error){
       console.log(error);
@@ -68,15 +53,15 @@ function HomePage({}){
             .filter(appt => appt.status !== "cancelled")
             .map(appt => {
               
-              const dateOnly =  moment.utc(appt.date).format('YYYY-MM-DD');
-              const startA =    moment.utc(`${dateOnly}T${appt.start_time}`).local().format('HH:mm');
+              const date =  moment.utc(appt.start_time).format('YYYY-MM-DD');
+              const time =    moment.utc(appt.start_time).local().format('HH:mm');
 
               return (
                 <div key={appt.id} className="appointment-card">
                   <div className="appointment-details">
                     <p><strong>{strings.HOME_PAGE.DETAIL_LABELS.SERVICE}</strong> {appt.service_name}</p>
-                    <p><strong>{strings.HOME_PAGE.DETAIL_LABELS.DATE}</strong> {moment(appt.date).format('DD-MM-YYYY')}</p>
-                    <p><strong>{strings.HOME_PAGE.DETAIL_LABELS.TIME}</strong> {startA}</p>
+                    <p><strong>{strings.HOME_PAGE.DETAIL_LABELS.DATE}</strong> {date}</p>
+                    <p><strong>{strings.HOME_PAGE.DETAIL_LABELS.TIME}</strong> {time}</p>
                   </div>
                   <button
                     onClick={() => handleCancelAppointment(appt.id)}
