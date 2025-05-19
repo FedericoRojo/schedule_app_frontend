@@ -10,9 +10,9 @@ Los estilos de admin tienen que se mas congruentes.DONE
 Los nombres y apellidos no deja poner ascentos DONE
 
 La parte en availabilityManager del update puede estar mal, me refiero al backend porque no pude testear
-overlap con turnos porque todavia no los puedo insertar
-Acomodar booking
-Acomodar employeeSection turnos.
+overlap con turnos porque todavia no los puedo insertar DONE
+Acomodar booking    DONE
+Acomodar employeeSection turnos. DONE
 
-CanBook lo deje en true para pruebas, retornar a lo que era.
+CanBook lo deje en true para pruebas, retornar a lo que era. DONE
 

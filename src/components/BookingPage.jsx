@@ -257,8 +257,8 @@ const TimeStep = ({
 
   useEffect(() => {
     if(selectedEvent){
-      //const isValid = canBookAppointment(personalAppointments, selectedEvent.start, minDistanceInDays);
-      const isValid = true;
+      const isValid = canBookAppointment(personalAppointments, selectedEvent.start, minDistanceInDays);
+      
       setCanBook(isValid);
     }
   }, [selectedEvent]);
