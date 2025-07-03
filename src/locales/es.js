@@ -1,4 +1,3 @@
-// strings.js
 export const strings = {
     LOGIN_PAGE: {
         TITLE: "Iniciar sesión",
@@ -120,7 +119,6 @@ export const strings = {
             SERVICES: "Servicios",
             APPOINTMENTS: "Turnos",
             SETTINGS: "Configuración"
-            // Agregar más ítems según necesites
         },
         EMPLOYEE_SECTION: {
             TITLE: "Empleados",
@@ -209,7 +207,8 @@ export const strings = {
                     END: "Fin",
                     DURATION: "Duración",
                     USER: "Usuario",
-                    PHONE: "Teléfono"
+                    PHONE: "Teléfono",
+                    STATUS: "Estado"
                 },
                 DEFAULTS: {
                     SERVICE: "Título del evento",
@@ -217,13 +216,21 @@ export const strings = {
                     START_DATE: "Fecha de inicio",
                     END_DATE: "Fecha de fin",
                     USER_NAME: "Nombre del usuario",
-                    USER_PHONE: "Número de teléfono del usuario"
+                    USER_PHONE: "Número de teléfono del usuario",
+                    USER_STATUS: "Estado del turno"
                 },
                 BUTTONS: {
-                    CLOSE: "Cerrar"
+                    CLOSE: "Cerrar",
+                    CONFIRM: 'Confirmar'
                 },
                 UNITS: {
                     DURATION: "min"
+                },  
+                STATUS: {
+                    pending: 'Pendiente',
+                    confirmed: 'Confirmado',
+                    cancelled: 'Cancelado',
+                    completed: 'Completado'
                 }
             },
             SLOTS: {

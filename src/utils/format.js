@@ -4,7 +4,6 @@ import moment from 'moment';
 const calculateAvailableSlotsExcludingAppointments = (availability, appointments) => {
     let newSlots = availability.map(slot => ({ ...slot }));
     
-    
     if(appointments.length > 0){
 
       appointments.forEach(appt => {

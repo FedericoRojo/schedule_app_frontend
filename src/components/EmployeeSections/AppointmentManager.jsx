@@ -4,7 +4,7 @@ import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'moment/locale/es'; 
 import {calculateAvailableSlotsExcludingAppointments} from '../../utils/format.js';
-import {getAppointments} from '../../services/appointment.js';
+import {getAppointments, updateAppointmentStatus} from '../../services/appointment.js';
 import {getAvailabilities} from '../../services/availability.js'
 
 import {calendarHourEnd, calendarHourStart} from './../../utils/calendar_config.js'
@@ -13,7 +13,7 @@ import {strings} from '../../locales/es.js'
 
 
 moment.updateLocale('es', {
-      week: { dow: 1 }               // dow = day of week: lunes=1 … domingo=7
+      week: { dow: 1 }               
     });
 moment.locale('es');
 const localizer = momentLocalizer(moment);
@@ -29,6 +29,7 @@ const AppointmentManager = ({
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [localDate, setLocalDate] = useState(selectedDate || new Date());
+  const [appointmentStatus, setAppointmentStatus] = useState({id: '', status: ''});
 
 
 
@@ -67,9 +68,7 @@ const AppointmentManager = ({
 
   const buildEvents = () => {
     const result = [];
-    
     let newAvailability = calculateAvailableSlotsExcludingAppointments(availability, appointments);
-
     if (newAvailability != null && newAvailability.length != 0) {
       newAvailability.forEach(slot => {
           const start = moment.utc(slot.start_time).local().toDate();
@@ -95,7 +94,7 @@ const AppointmentManager = ({
           start: start,
           end: end,
           title: appt.service.name,
-          status: 'appointment',
+          status: appt.status,
           resource: appt
         });
       });
@@ -108,32 +107,70 @@ const AppointmentManager = ({
   
 
   const eventStyleGetter = (event) => {
-    const style = {
-      backgroundColor: event.status === 'availability' ? '#E0F7FA' : '#FFE0B2',
-      borderRadius: '4px',
-      border: 'none',
-      color: '#000',
+      const statusColors = {
+        availability: '#AED6F1',  
+        appointment: {
+          pending: '#F1C40F',     
+          confirmed: '#3498DB',   
+          cancelled: '#E74C3C',   
+          completed: '#27AE60'    
+        }
+      };
+
+      const backgroundColor = event.status === 'availability' 
+          ? statusColors.availability 
+          : statusColors.appointment[event.status] || '#F5F5F5';  
+
+        const style = {
+          backgroundColor,
+          borderRadius: '4px',
+          border: 'none',
+          color: '#000',
+          opacity: event.status === 'cancelled' ? 0.7 : 1,  
+          fontStyle: event.status === 'completed' ? 'italic' : 'normal'
+        };
+
+        return { style };
     };
-    return { style };
-  };
+
+  
 
   const onSelectEvent = (event) => {
 
     if(event.resource.client != null){
-      console.log(event);
       setSelectedEvent({
+        id: event.id,
         user: event.resource.client.name,
         phone: event.resource.client.phone,
         service: event.resource.service.name,
         duration: event.resource.service.duration,
         start: moment(event.start).format('HH:mm'),
-        end: moment(event.end).format('HH:mm'),
         date: moment(event.start).format('YYYY-MM-DD'),
-
+        status: event.resource.status
       })
       setShowModal(true);
     }
   };
+
+  const confirmChangeAppointmentStatus = async() => {
+    try{
+      const selectedId = appointmentStatus.id;
+      const elemId = selectedId.split('-')[1];
+      const response = await updateAppointmentStatus(elemId, appointmentStatus.status)
+
+      setAppointments( prevAppt => prevAppt.map(elem => 
+        elem.id != elemId 
+        ? elem 
+        : {...elem, status: appointmentStatus.status})
+      )
+
+
+      setAppointmentStatus({id: '', status: ''})
+      setShowModal(false)
+    }catch(e){
+      console.log(e);
+    }
+  }
 
   const handleNavigate = (newDate) => {
     const monday = moment(newDate).startOf('isoWeek').toDate();
@@ -172,6 +209,9 @@ const AppointmentManager = ({
         <EventDetailsModal
           event={selectedEvent}
           onClose={() => setShowModal(false)}
+          setAppointmentStatus={setAppointmentStatus}
+          appointmentStatus={appointmentStatus}
+          onConfirm={confirmChangeAppointmentStatus}
         />
       )}
     </div>
@@ -180,7 +220,7 @@ const AppointmentManager = ({
 
 export default AppointmentManager;
 
-const EventDetailsModal = ({event, onClose}) => {
+const EventDetailsModal = ({event, onClose, onConfirm, appointmentStatus, setAppointmentStatus}) => {
   if (!event) return null
 
   return (
@@ -193,28 +233,23 @@ const EventDetailsModal = ({event, onClose}) => {
     <div className="edm-content">
       <p>
         <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.SERVICE}:</strong> 
-        {event.service || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.SERVICE}
+         {event.service || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.SERVICE}
       </p>
       
       <p>
         <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.DATE}:</strong> 
-        {event.date?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.DESCRIPTION}
+         {event.date?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.DESCRIPTION}
       </p>
       
       <p>
         <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.START}:</strong> 
-        {event.start?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.START_DATE}
-      </p>
-      
-      <p>
-        <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.END}:</strong> 
-        {event.end?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.END_DATE}
+         {event.start?.toString() || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.START_DATE}
       </p>
       
       <p>
         <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.DURATION}:</strong> 
-        {event.duration || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.DESCRIPTION} 
-        {strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.UNITS.DURATION}
+         {event.duration || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.DESCRIPTION} 
+         {strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.UNITS.DURATION}
       </p>
 
       <p>
@@ -224,13 +259,32 @@ const EventDetailsModal = ({event, onClose}) => {
       
       <p>
         <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.PHONE}:</strong> 
-        {event.phone || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.USER_PHONE}
+         {event.phone || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.USER_PHONE}
       </p>
+
+      <div className="status-container">
+          <label htmlFor="status-select">
+            <strong>{strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.LABELS.STATUS}:</strong>
+          </label>
+          <select
+            id="status-select"
+            value={appointmentStatus.status || event.status || strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.DEFAULTS.USER_STATUS}
+            onChange={(e) => setAppointmentStatus({id: event.id, status: e.target.value})}
+            className="status-select"
+          >
+            {Object.entries(strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.STATUS).map(([key, value]) => (
+              <option key={key} value={key}>{value}</option>
+            ))}
+          </select>
+      </div>
     </div>
 
     <div className="edm-actions">
       <button onClick={onClose} className="edm-close-button">
         {strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.BUTTONS.CLOSE}
+      </button>
+      <button onClick={onConfirm} className="edm-close-button">
+        {strings.EMPLOYEE_SCHEDULE.APPOINTMENT_MANAGER.DETAILS.BUTTONS.CONFIRM}
       </button>
     </div>
   </div>

@@ -145,7 +145,6 @@ export default function ServicesSection ({services, setServices, fetchServices})
          </div>)}
         
   
-        {/* Tabla de servicios */}
         <table className="services-table">
           <thead>
             <tr>

@@ -39,7 +39,7 @@ const AvailabilityManager = ({
     const [localDate, setLocalDate] = useState(selectedDate || new Date());
     
     moment.updateLocale('es', {
-      week: { dow: 1 }               // dow = day of week: lunes=1 … domingo=7
+      week: { dow: 1 }              
     });
     moment.locale('es'); 
     const localizer = momentLocalizer(moment);

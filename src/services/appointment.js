@@ -22,6 +22,30 @@ async function getUserAppointments(){
     return apptResponse;
 }
 
+async function updateAppointmentStatus(id, status){
+    const token = localStorage.getItem('token');
+    try{
+        const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/appointment/update/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({status: status})
+        })
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update status');
+        }
+        
+        return await response.json();
+    }catch (error) {
+        console.error('Update error:', error);
+        throw error;
+    }
+
+}
+
 async function cancelAppointment(id){
     const token = localStorage.getItem('token');
     const response = await fetch(`${import.meta.env.VITE_APP_API_BASE_URL}/appointment/cancel/${id}`, {
@@ -52,4 +76,4 @@ async function createAppointment(specialistID, serviceId, dateAppt, startAppt, e
       });
     return response;
 }
-export {getAppointments, getUserAppointments, createAppointment, cancelAppointment}
+export {getAppointments, getUserAppointments, createAppointment, cancelAppointment, updateAppointmentStatus}
